@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import MiniDayApp from './MiniDayApp'
 
@@ -129,7 +130,25 @@ function Section({ id, eyebrow, title, sub, children }: {
   )
 }
 
+type MediaTab = 'short' | 'full' | 'shots'
+
+const MEDIA_TABS: { id: MediaTab; label: string; caption: string }[] = [
+  { id: 'short', label: 'Short · 1:25', caption: 'The whole idea in one sitting.' },
+  {
+    id: 'full',
+    label: 'Full tour · 5:42',
+    caption: 'Capture, timers, notes, journal, goals, analytics, delegation — everything.',
+  },
+  {
+    id: 'shots',
+    label: 'Screenshots',
+    caption: 'Fullscreen in demo mode — the default window is 480 px and stretches happily.',
+  },
+]
+
 export default function App() {
+  const [mediaTab, setMediaTab] = useState<MediaTab>('short')
+
   return (
     <>
       {/* ---------- hero ---------- */}
@@ -182,7 +201,7 @@ export default function App() {
       <Section
         id="watch"
         eyebrow="on film"
-        title="One minute, the whole idea"
+        title="Watch it work — pick a format"
         sub={
           <>
             Filmed entirely inside the app's built-in <em>demo mode</em> — a disposable seeded
@@ -190,23 +209,36 @@ export default function App() {
           </>
         }
       >
-        <video className="reel" controls preload="metadata" poster="/assets/poster-short.jpg" playsInline>
-          <source src="/assets/demo-dayapp-short.mp4" type="video/mp4" />
-        </video>
-        <details className="full-tour">
-          <summary>Prefer the full 5:42 tour? Capture, timers, notes, journal, goals, analytics, delegation — all of it.</summary>
-          <video className="reel" controls preload="none" poster="/assets/poster-full.jpg" playsInline>
+        <div className="media-tabs" role="tablist" aria-label="demo format">
+          {MEDIA_TABS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={mediaTab === t.id}
+              className={'media-tab' + (mediaTab === t.id ? ' active' : '')}
+              onClick={() => setMediaTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {mediaTab === 'short' && (
+          <video className="reel" controls preload="metadata" poster="/assets/poster-short.jpg" playsInline>
+            <source src="/assets/demo-dayapp-short.mp4" type="video/mp4" />
+          </video>
+        )}
+        {mediaTab === 'full' && (
+          <video className="reel" controls preload="metadata" poster="/assets/poster-full.jpg" playsInline>
             <source src="/assets/demo-dayapp.mp4" type="video/mp4" />
           </video>
-        </details>
-        <div className="shots">
-          <img src="/assets/demo-list.png" alt="DayApp's three sections — Today, Daily, Backlog with priority tiers" loading="lazy" />
-          <img src="/assets/demo-notes.png" alt="Goals and notes above the three task sections" loading="lazy" />
-        </div>
-        <p className="shots-caption">
-          The default window is 480&nbsp;px; it fullscreens happily. Everything above runs on the
-          seeded demo data.
-        </p>
+        )}
+        {mediaTab === 'shots' && (
+          <div className="shots">
+            <img src="/assets/demo-list.png" alt="DayApp's three sections — Today, Daily, Backlog with priority tiers" />
+            <img src="/assets/demo-notes.png" alt="Goals and notes above the three task sections" />
+          </div>
+        )}
+        <p className="media-caption">{MEDIA_TABS.find((t) => t.id === mediaTab)?.caption}</p>
       </Section>
 
       {/* ---------- features ---------- */}

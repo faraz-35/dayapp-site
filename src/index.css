@@ -515,7 +515,41 @@ h2 {
 
 .log-at { flex: none; color: var(--text-faint); font-size: 11px; }
 
-/* ---- videos + shots ------------------------------------------------------ */
+/* ---- videos: one surface, format pills choose what's on it ----------- */
+
+/* the app's range-pill language (the Analytics Today/Week/Month/All pills) */
+.media-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+}
+
+.media-tab {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-dim);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: color 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+}
+
+.media-tab:hover { color: var(--text); background: var(--bg-hover); }
+
+.media-tab.active {
+  color: var(--accent);
+  border-color: rgba(123, 140, 255, 0.5);
+  background: rgba(123, 140, 255, 0.08);
+}
+
+.media-caption {
+  color: var(--text-faint);
+  font-size: 12.5px;
+  margin: 10px 0 0;
+}
 
 .reel {
   display: block;
@@ -526,28 +560,10 @@ h2 {
   border-radius: 12px;
 }
 
-.full-tour { margin-top: 18px; }
-
-.full-tour summary {
-  cursor: pointer;
-  color: var(--text-dim);
-  font-size: 14px;
-  padding: 10px 0;
-  transition: color 0.1s ease;
-  list-style-position: outside;
-}
-
-.full-tour summary:hover { color: var(--text); }
-
-.full-tour summary::marker { color: var(--text-faint); }
-
-.full-tour .reel { margin-top: 6px; }
-
 .shots {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
-  margin-top: 26px;
 }
 
 .shots img {
@@ -555,12 +571,6 @@ h2 {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 12px;
-}
-
-.shots-caption {
-  color: var(--text-faint);
-  font-size: 12.5px;
-  margin: 10px 0 0;
 }
 
 /* ---- features ------------------------------------------------------------ */
