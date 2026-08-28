@@ -282,7 +282,7 @@ export default function App() {
       {/* ---------- footer ---------- */}
       <footer className="wrap footer">
         <span>
-          DayApp · built by Faraz Shah · <a href={GITHUB}>source</a>
+          DayApp · built by Faraz Shah · MIT · <a href={GITHUB}>source</a>
         </span>
         <span className="footer-line">the log is the journal</span>
       </footer>
