@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
+import Analytics, { track } from '@vercel/analytics'
 import MiniDayApp from './MiniDayApp'
 
 const GITHUB = 'https://github.com/faraz-35/dayapp'
@@ -168,7 +169,7 @@ export default function App() {
             No cron · no cloud · no accounts. Open source on GitHub.
           </p>
           <div className="fx d3 cta-row">
-            <a className="btn-primary" href={DMG_URL}>
+            <a className="btn-primary" href={DMG_URL} onClick={() => track('download_dmg')}>
               Download for Mac ↧
             </a>
             <a className="btn-ghost" href={GITHUB}>
@@ -318,7 +319,7 @@ export default function App() {
           </div>
         </div>
         <div className="cta-row center">
-          <a className="btn-primary" href={DMG_URL}>
+          <a className="btn-primary" href={DMG_URL} onClick={() => track('download_dmg')}>
             Download .dmg ↧
           </a>
           <a className="btn-ghost" href={GITHUB}>
@@ -334,6 +335,7 @@ export default function App() {
         </span>
         <span className="footer-line">the log is the journal</span>
       </footer>
+      <Analytics />
     </>
   )
 }
