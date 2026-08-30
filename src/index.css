@@ -228,7 +228,7 @@ h2 {
 
 .demo-grid {
   display: grid;
-  grid-template-columns: 440px 1fr;
+  grid-template-columns: 2fr 1fr;
   gap: 22px;
   align-items: start;
 }
