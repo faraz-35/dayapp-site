@@ -3,6 +3,9 @@ import type { ReactNode } from 'react'
 import MiniDayApp from './MiniDayApp'
 
 const GITHUB = 'https://github.com/faraz-35/dayapp'
+const RELEASE = 'https://github.com/faraz-35/dayapp/releases/tag/v0.1.2'
+const DMG_URL =
+  'https://github.com/faraz-35/dayapp/releases/download/v0.1.2/DayApp_0.1.2_aarch64.dmg'
 const HERO_LINE = 'a live today list that journals itself'
 
 const FEATURES: { label: string; title: string; body: ReactNode }[] = [
@@ -11,9 +14,9 @@ const FEATURES: { label: string; title: string; body: ReactNode }[] = [
     title: 'Today · Daily · Backlog',
     body: (
       <>
-        Drag between three sections. At midnight the comparisons just stop being true — unfinished
-        Today falls to Backlog, daily habits reset, done rows retire. One idempotent sweep on
-        launch; no cron anywhere.
+        Drag tasks between three sections. At midnight the unfinished Today tasks drop into the
+        Backlog, daily habits reset, and finished rows disappear. No scheduler does this. The app
+        checks the date whenever it draws the list.
       </>
     ),
   },
@@ -22,8 +25,9 @@ const FEATURES: { label: string; title: string; body: ReactNode }[] = [
     title: 'The log writes itself',
     body: (
       <>
-        Every create, complete, move and edit appends to one timestamped log — that log{' '}
-        <em>is</em> the journal. &ldquo;What did I do this week?&rdquo; is a SELECT.
+        Every task you add, finish, or move is written down with its time. That record{' '}
+        <em>is</em> the journal; you never write it yourself. &ldquo;What did I do this week?&rdquo;{' '}
+        is one query.
       </>
     ),
   },
@@ -32,9 +36,9 @@ const FEATURES: { label: string; title: string; body: ReactNode }[] = [
     title: '!1 · #tag · @',
     body: (
       <>
-        Type the axes right in the capture line: <code>!1</code> renders signal bars, <code>#tag</code>{' '}
-        a stable color label, a bare <code>@</code> marks the task fully delegable. No popovers, no
-        forms.
+        Details go in the task line as you type: <code>!1</code> sets a priority, <code>#tag</code>{' '}
+        files it under a project, <code>@</code> marks it for your agent. There are no menus to
+        open; the line you typed is the whole input.
       </>
     ),
   },
@@ -43,19 +47,19 @@ const FEATURES: { label: string; title: string; body: ReactNode }[] = [
     title: 'Goals, three horizons',
     body: (
       <>
-        Timeless · long · short — statements of direction above the list, giving the daily{' '}
-        <em>why</em> over the <em>when</em>. Achievements are kept, never swept.
+        Goals sit above the list: timeless, long term, short term. They are the reason the daily
+        work happens. Achieve one and it is kept, dated with the month you hit it, not deleted.
       </>
     ),
   },
   {
     label: 'notes + journal',
-    title: '##j · ##q — a typed bus',
+    title: '##j and ##q',
     body: (
       <>
-        Free-form notes with the same token grammar, per-note find and .txt export. The capture bar
-        is also a bus: <code>##j</code> saves a line of reflection to the journal, <code>##q</code>{' '}
-        a quote for the quiet fullscreen moment.
+        Free-form notes with per-note search and a .txt export. The notes box also takes two{' '}
+        shortcuts: <code>##j</code> saves a line of reflection to the journal, <code>##q</code>{' '}
+        saves a quote the app will show you later.
       </>
     ),
   },
@@ -64,41 +68,42 @@ const FEATURES: { label: string; title: string; body: ReactNode }[] = [
     title: 'One honest timer',
     body: (
       <>
-        ▶/⏸ write open/close timestamps — the open row <em>is</em> the running timer, no separate
-        state. Survives restarts, surfaces as a per-row cumulative and the day ledger's total.
+        One timer runs at a time. Press ▶ to start it, ⏸ to stop it, and the app totals the time
+        per task and per day. Quit mid-task and the clock picks up where it left off on the next
+        launch.
       </>
     ),
   },
   {
     label: 'analytics',
-    title: 'Synthesis, not bookkeeping',
+    title: 'The week in review',
     body: (
       <>
-        Done, streak, missed habits, a month heatmap, project &amp; priority splits and a
-        click-through day ledger — derived from write-time snapshots, so reassigning a task never
-        rewrites the past.
+        A page of answers: what you finished, your streak, missed habits, a month heatmap, and
+        time split by project and priority. Change a task's project later and its history stays
+        exactly as it was.
       </>
     ),
   },
   {
     label: 'delegation',
-    title: 'Agents as first-class users',
+    title: 'Hand work to an agent',
     body: (
       <>
-        A bare <code>@</code> puts a row in the agent's queue; the task's details are the prompt.
-        The CLI prints the 🤖 list, and a remote session can claim, work and complete tasks over
-        SSH.
+        A task marked <code>@</code> goes into the agent queue, and the task's own notes are its
+        instructions. From a terminal, an AI session can claim a task, do the work, and check it
+        off over SSH.
       </>
     ),
   },
   {
     label: 'everywhere',
-    title: 'CLI + phone mirror',
+    title: 'Terminal and phone',
     body: (
       <>
-        The same binary is a headless client — <code>--list</code>, <code>--journal</code>,{' '}
-        <code>--complete</code> over SSH. An Android mirror renders the list and feeds a capture
-        inbox; the Mac stays the single writer.
+        The same binary is also a terminal client: <code>--list</code>, <code>--complete</code>,{' '}
+        <code>--journal</code> over SSH. An Android app mirrors the list and sends quick captures
+        back to the Mac, which stays the only place that writes.
       </>
     ),
   },
@@ -163,13 +168,20 @@ export default function App() {
             No cron · no cloud · no accounts. Open source on GitHub.
           </p>
           <div className="fx d3 cta-row">
-            <a className="btn-primary" href={GITHUB}>
+            <a className="btn-primary" href={DMG_URL}>
+              Download for Mac ↧
+            </a>
+            <a className="btn-ghost" href={GITHUB}>
               View the source ↗
             </a>
             <a className="btn-ghost" href="#watch">
               Watch the demo ↓
             </a>
           </div>
+          <p className="fx d4 cta-note">
+            v0.1.2 · Apple Silicon · unsigned build. On first launch, right-click the app and
+            choose Open. <a href={RELEASE}>Release notes</a>
+          </p>
         </div>
       </header>
 
@@ -244,11 +256,12 @@ export default function App() {
       {/* ---------- features ---------- */}
       <Section
         eyebrow="what's inside"
-        title="Small surface, deep model"
+        title="Everything reads one log"
         sub={
           <>
-            Every feature hangs off the same spine: state, plus a log that writes itself. Nothing
-            here needs a background job — that constraint shaped all of it.
+            Every feature below writes to or reads from the same timestamped record. You use the
+            app, it takes the notes; there is no configuration and no background process. The rest
+            is questions you can ask.
           </>
         }
       >
@@ -305,7 +318,10 @@ export default function App() {
           </div>
         </div>
         <div className="cta-row center">
-          <a className="btn-primary" href={GITHUB}>
+          <a className="btn-primary" href={DMG_URL}>
+            Download .dmg ↧
+          </a>
+          <a className="btn-ghost" href={GITHUB}>
             github.com/faraz-35/dayapp ↗
           </a>
         </div>
