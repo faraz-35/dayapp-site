@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
 
-/* A working miniature of DayApp, in the browser. Real state, real mutations,
-   and a live "actions" log beside it — the product's whole thesis (every
-   mutation writes itself into a timestamped log) demonstrated instead of
-   described. */
+/* A working miniature of DayApp's main page, in the browser: Notes above the
+   task stack, one capture bar routing to three sections, tier dividers with
+   the label centered between two hairlines — and a live "actions" log beside
+   it. Tasks log themselves (the thesis); notes deliberately don't (content,
+   not activity) — exactly the app's rule. */
 
 type Section = 'today' | 'daily' | 'backlog'
 type Priority = 1 | 2 | 3 | null
@@ -16,6 +17,13 @@ interface Item {
   priority: Priority
   project: string | null
   agent: boolean
+}
+
+interface Note {
+  id: number
+  body: string
+  priority: Priority
+  project: string | null
 }
 
 interface LogEntry {
@@ -35,8 +43,8 @@ function projectColor(name: string): string {
   return `hsl(${h % 360} 55% 68%)`
 }
 
-// the app's token grammar: trailing !N / #tag / bare @ , composable, in any order
-function parseCapture(raw: string): { text: string; priority: Priority; project: string | null; agent: boolean } {
+// trailing !N / #tag / bare @ , composable, in any order
+function parseTags(raw: string): { text: string; priority: Priority; project: string | null; agent: boolean } {
   const words = raw.trim().split(/\s+/)
   let priority: Priority = null
   let project: string | null = null
@@ -52,9 +60,23 @@ function parseCapture(raw: string): { text: string; priority: Priority; project:
   return { text: words.join(' '), priority, project, agent }
 }
 
-// the demo.sql persona: a founder/builder's day
-const SEED: Omit<Item, 'id'>[] = [
+// the task capture's routing: a leading ##t / ##d / ##b sends the line to a
+// section; a plain line lands in Today; a bare token adds nothing
+function parseTaskCapture(raw: string): { section: Section; tags: ReturnType<typeof parseTags> } {
+  let section: Section = 'today'
+  let text = raw.trim()
+  const route = text.match(/^##(t|d|b)(\s+|$)/)
+  if (route) {
+    section = route[1] === 't' ? 'today' : route[1] === 'd' ? 'daily' : 'backlog'
+    text = text.slice(route[0].length)
+  }
+  return { section, tags: parseTags(text) }
+}
+
+// the demo persona: a founder/builder's day
+const SEED_TASKS: Omit<Item, 'id'>[] = [
   { text: 'Ship the landing page', section: 'today', done: false, priority: 1, project: 'growth', agent: false },
+  { text: 'Send the invoice', section: 'today', done: true, priority: null, project: null, agent: false },
   { text: 'Reply to the intro email', section: 'today', done: false, priority: null, project: null, agent: false },
   { text: 'Read 20 pages', section: 'daily', done: true, priority: null, project: null, agent: false },
   { text: 'Ship one small thing', section: 'daily', done: false, priority: 2, project: null, agent: false },
@@ -63,8 +85,33 @@ const SEED: Omit<Item, 'id'>[] = [
   { text: 'Deep-clean the apartment', section: 'backlog', done: false, priority: null, project: null, agent: false },
 ]
 
-function seed(): Item[] {
-  return SEED.map((s, i) => ({ ...s, id: i + 1 }))
+const SEED_NOTES: Omit<Note, 'id'>[] = [
+  {
+    body: 'Launch checklist\nscreenshots · dmg link · first post draft',
+    priority: 1,
+    project: null,
+  },
+  {
+    body: 'Idea: a quote screensaver for the idle minutes',
+    priority: null,
+    project: 'growth',
+  },
+  {
+    body: 'Deep Work — lines to reread\n"clarity about what matters provides clarity about what does not"',
+    priority: null,
+    project: null,
+  },
+]
+
+// the persona's morning, already in the log — the panel is alive on arrival
+const SEED_LOG: Omit<LogEntry, 'id'>[] = [
+  { verb: 'completed', text: 'Send the invoice', at: '9:41', tone: 'done' },
+  { verb: 'created', text: 'Ship the landing page', at: '8:57', tone: 'create' },
+  { verb: 'completed', text: 'Read 20 pages', at: '7:30', tone: 'done' },
+]
+
+function seedTasks(): Item[] {
+  return SEED_TASKS.map((s, i) => ({ ...s, id: i + 1 }))
 }
 
 const tierRank = (p: Priority) => (p == null ? 4 : p)
@@ -77,27 +124,6 @@ function Bars({ filled, faint }: { filled: number; faint?: boolean }) {
         <span key={i} className={'b' + (i <= filled ? ' on' : '')} />
       ))}
     </span>
-  )
-}
-
-function Capture({ placeholder, onAdd }: { placeholder?: string; onAdd: (text: string) => void }) {
-  const [value, setValue] = useState('')
-  return (
-    <form
-      className="mcapture"
-      onSubmit={(e) => {
-        e.preventDefault()
-        onAdd(value)
-        setValue('')
-      }}
-    >
-      <input
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder={placeholder}
-        aria-label="add a task"
-      />
-    </form>
   )
 }
 
@@ -126,10 +152,25 @@ function Row({ item, showBars, onToggle, onRemove }: {
   )
 }
 
+function NoteCard({ note, onRemove }: { note: Note; onRemove: () => void }) {
+  return (
+    <div className="mnote">
+      <div className="mnote-body">{note.body}</div>
+      <span className="mnote-meta">
+        {note.project && (
+          <span className="mproj" style={{ color: projectColor(note.project) }}>#{note.project}</span>
+        )}
+        <button className="mdel" onClick={onRemove} aria-label="delete note">×</button>
+      </span>
+    </div>
+  )
+}
+
 export default function MiniDayApp() {
-  const [items, setItems] = useState<Item[]>(seed)
-  const [log, setLog] = useState<LogEntry[]>([])
-  const logId = useRef(0)
+  const [items, setItems] = useState<Item[]>(seedTasks)
+  const [notes, setNotes] = useState<Note[]>(() => SEED_NOTES.map((s, i) => ({ ...s, id: i + 1 })))
+  const [log, setLog] = useState<LogEntry[]>(() => SEED_LOG.map((s, i) => ({ ...s, id: i + 1 })))
+  const logId = useRef(SEED_LOG.length)
 
   function record(verb: string, text: string, tone: LogEntry['tone']) {
     const at = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
@@ -153,17 +194,29 @@ export default function MiniDayApp() {
     record('deleted', item.text, 'delete')
   }
 
-  function add(section: Section, raw: string) {
-    const { text, priority, project, agent } = parseCapture(raw)
+  function addTask(raw: string) {
+    const { section, tags } = parseTaskCapture(raw)
+    if (!tags.text) return
+    setItems((xs) => [...xs, { id: Date.now(), done: false, section, ...tags }])
+    record('created', tags.text, 'create')
+  }
+
+  function addNote(raw: string) {
+    const { text, priority, project } = parseTags(raw)
     if (!text) return
-    setItems((xs) => [...xs, { id: Date.now(), text, section, done: false, priority, project, agent }])
-    record('created', text, 'create')
+    setNotes((ns) => [...ns, { id: Date.now(), body: text, priority, project }])
+    // deliberately unlogged — notes are content, not activity (the app's rule)
+  }
+
+  function removeNote(note: Note) {
+    setNotes((ns) => ns.filter((n) => n.id !== note.id))
   }
 
   function reset() {
-    setItems(seed())
-    setLog([])
-    logId.current = 0
+    setItems(seedTasks())
+    setNotes(SEED_NOTES.map((s, i) => ({ ...s, id: i + 1 })))
+    setLog(SEED_LOG.map((s, i) => ({ ...s, id: i + 1 })))
+    logId.current = SEED_LOG.length
   }
 
   const backlog = items
@@ -179,13 +232,40 @@ export default function MiniDayApp() {
           <button className="win-reset" onClick={reset} title="reset the demo">↺</button>
         </div>
         <div className="win-body">
-          {SECTIONS.filter((s) => s !== 'backlog').map((section) => (
+          {/* ---- notes: content, not activity — creating one writes no log ---- */}
+          <div className="surface-head">Notes</div>
+          <form
+            className="capture"
+            onSubmit={(e) => {
+              e.preventDefault()
+              addNote((e.currentTarget.elements[0] as HTMLInputElement).value)
+              e.currentTarget.reset()
+            }}
+          >
+            <input placeholder="Add a note — end with !1 or #tag to mark it" aria-label="add a note" />
+          </form>
+          {notes.map((n) => (
+            <NoteCard key={n.id} note={n} onRemove={() => removeNote(n)} />
+          ))}
+
+          {/* ---- tasks: ONE capture above the stack, ##t / ##d / ##b routes ---- */}
+          <div className="surface-head tasks-head">Tasks</div>
+          <form
+            className="capture"
+            onSubmit={(e) => {
+              e.preventDefault()
+              addTask((e.currentTarget.elements[0] as HTMLInputElement).value)
+              e.currentTarget.reset()
+            }}
+          >
+            <input
+              placeholder="Add a task — plain for Today, ##d / ##b to route, !1 #tag @ to mark"
+              aria-label="add a task"
+            />
+          </form>
+          {SECTIONS.map((section) => (
             <section className="msection" key={section}>
-              <div className="mhead">{section}</div>
-              <Capture
-                placeholder={section === 'today' ? 'try: ship the pitch deck !1' : undefined}
-                onAdd={(t) => add(section, t)}
-              />
+              <div className="stack-head">{section}</div>
               {items
                 .filter((i) => i.section === section)
                 .map((item) => (
@@ -200,8 +280,7 @@ export default function MiniDayApp() {
             </section>
           ))}
           <section className="msection">
-            <div className="mhead">backlog</div>
-            <Capture placeholder="or: draft the launch post #growth @" onAdd={(t) => add('backlog', t)} />
+            <div className="stack-head">backlog</div>
             {backlog.map((item, i) => {
               const prev = backlog[i - 1]
               const newTier = !prev || tierRank(prev.priority) !== tierRank(item.priority)
@@ -229,7 +308,7 @@ export default function MiniDayApp() {
             Every create, complete, uncomplete and delete lands here, timestamped — try the circles,
             or capture a task ending in <code>!1</code>, <code>#tag</code> or a bare <code>@</code>.
             In the real app this log is the journal, the analytics, the week in review: no separate
-            journal to keep.
+            journal to keep. Notes never appear here — they are content, not activity.
           </div>
         ) : (
           log.map((e) => (

@@ -22,13 +22,13 @@ const FEATURES: { label: string; title: string; body: ReactNode }[] = [
     ),
   },
   {
-    label: 'the journal',
-    title: 'The log writes itself',
+    label: 'the notepad',
+    title: 'Notes live here too',
     body: (
       <>
-        Every task you add, finish, or move is written down with its time. That record{' '}
-        <em>is</em> the journal; you never write it yourself. &ldquo;What did I do this week?&rdquo;{' '}
-        is one query.
+        A notepad above the list — ideas, checklists, pasted text. Notes take the same typed marks
+        as tasks (<code>!1</code>, <code>#tag</code>), group by priority, and export as .txt. One
+        window instead of two apps.
       </>
     ),
   },
@@ -37,9 +37,20 @@ const FEATURES: { label: string; title: string; body: ReactNode }[] = [
     title: '!1 · #tag · @',
     body: (
       <>
-        Details go in the task line as you type: <code>!1</code> sets a priority, <code>#tag</code>{' '}
+        Details go in the line as you type: <code>!1</code> sets a priority, <code>#tag</code>{' '}
         files it under a project, <code>@</code> marks it for your agent. There are no menus to
         open; the line you typed is the whole input.
+      </>
+    ),
+  },
+  {
+    label: 'the journal',
+    title: 'The log writes itself',
+    body: (
+      <>
+        Every task you add, finish, or move is written down with its time. That record{' '}
+        <em>is</em> the journal; you never write it yourself. &ldquo;What did I do this week?&rdquo;{' '}
+        is one query. From the notes box, <code>##j</code> saves a line of reflection to it.
       </>
     ),
   },
@@ -48,19 +59,8 @@ const FEATURES: { label: string; title: string; body: ReactNode }[] = [
     title: 'Goals, three horizons',
     body: (
       <>
-        Goals sit above the list: timeless, long term, short term. They are the reason the daily
+        Goals sit above everything: timeless, long term, short term. They are the reason the daily
         work happens. Achieve one and it is kept, dated with the month you hit it, not deleted.
-      </>
-    ),
-  },
-  {
-    label: 'notes + journal',
-    title: '##j and ##q',
-    body: (
-      <>
-        Free-form notes with per-note search and a .txt export. The notes box also takes two{' '}
-        shortcuts: <code>##j</code> saves a line of reflection to the journal, <code>##q</code>{' '}
-        saves a quote the app will show you later.
       </>
     ),
   },
@@ -113,7 +113,7 @@ const FEATURES: { label: string; title: string; body: ReactNode }[] = [
 const KEYS: [string, string][] = [
   ['⌘P', 'the command palette — every toggle, view and action'],
   ['⌘F', 'search; a leading # flips to projects, @ to the agent filter'],
-  ['nn · nt · nd · nb', 'focus the capture field of any section'],
+  ['nn', 'focus the notes capture; nt · nd · nb focus the task capture, routed'],
   ['t1–9 · b41–49', 'address a row directly — digits 1–6 act on it'],
   ['e · Enter', 'edit · complete'],
   ['j / k', 'walk the rows — or scroll, when nothing is focused'],
@@ -163,8 +163,9 @@ export default function App() {
           <div className="fx d0 wordmark">DayApp</div>
           <h1 className="fx d1">{HERO_LINE}</h1>
           <p className="fx d2 hero-sub">
-            A native macOS daily-action tool where the timestamped action log <em>is</em> the
-            journal — for free. One accent, one window, one SQLite file.
+            A to-do list and a notes app in one native macOS window — and because every action is
+            timestamped as you work, the journal, the weekly review and the streaks all exist
+            already.
             <br />
             No cron · no cloud · no accounts. Open source on GitHub.
           </p>
@@ -192,8 +193,9 @@ export default function App() {
         title="Don't read about it — use it"
         sub={
           <>
-            This is real React state, not a video. Complete the circles, capture a task, watch the
-            log on the right write the journal for you. <code>↺</code> resets the demo.
+            This is real React state, not a video. Add a note, capture a task — a plain line lands
+            in Today, <code>##b</code> routes it to the Backlog — and watch the log on the right
+            write the journal for you. <code>↺</code> resets the demo.
           </>
         }
       >
@@ -260,9 +262,9 @@ export default function App() {
         title="Everything reads one log"
         sub={
           <>
-            Every feature below writes to or reads from the same timestamped record. You use the
-            app, it takes the notes; there is no configuration and no background process. The rest
-            is questions you can ask.
+            Nearly everything below writes to or reads from the same timestamped record — the
+            notes are the one guest that stays out of it. You use the app, it takes the notes;
+            there is no configuration and no background process.
           </>
         }
       >

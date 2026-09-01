@@ -4,6 +4,7 @@
 
 :root {
   --bg: #0e0f11;
+  --bg-soft: #121316;
   --bg-elev: #16181c;
   --bg-hover: #1c1f24;
   --border: #23262d;
@@ -57,7 +58,10 @@ code {
   padding: 0 28px;
 }
 
-.section { padding: 72px 0 8px; }
+/* one vertical rhythm for the whole page: every gap between sections is the
+   same 88px — sections carry only a top padding, bands and the footer place
+   themselves with the same unit */
+.section { padding: 88px 0 0; }
 
 /* ---- shared section chrome --------------------------------------------- */
 
@@ -89,7 +93,7 @@ h2 {
 
 .hero {
   position: relative;
-  padding: 110px 0 72px;
+  padding: 110px 0 0;
   overflow: hidden;
 }
 
@@ -204,7 +208,7 @@ h2 {
   border-bottom: 1px solid var(--border);
   text-align: center;
   padding: 84px 28px;
-  margin-top: 64px;
+  margin-top: 88px;
 }
 
 .quote-band p {
@@ -282,39 +286,61 @@ h2 {
 .win-reset:hover { color: var(--text); background: var(--bg-hover); }
 
 .win-body {
-  padding: 14px 14px 18px;
+  padding: 16px 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 6px;
 }
 
-.msection { display: flex; flex-direction: column; gap: 6px; }
+/* the app's two-tier head language: NOTES/TASKS are surface labels —
+   left-anchored, a step brighter; TODAY/DAILY/BACKLOG name subsections of
+   the stack — fainter, centered */
+.surface-head {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 14px 0 6px;
+}
 
-.mhead {
+.surface-head.tasks-head { margin-top: 24px; }
+
+.stack-head {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-faint);
+  text-align: center;
+  margin: 12px 0 4px;
 }
 
-.mcapture input {
-  width: 100%;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 9px;
-  color: var(--text);
-  font: inherit;
+/* the capture bar speaks the underline, not a box: a hairline that turns
+   accent while you type (the app's .capture language) */
+.capture {
+  border-bottom: 1px solid var(--border);
+  padding: 2px 2px 5px;
+  margin-bottom: 4px;
   transition: border-color 0.1s ease;
 }
 
-.mcapture input:focus {
+.capture:focus-within { border-color: var(--accent); }
+
+.capture input {
+  width: 100%;
+  background: none;
+  border: none;
   outline: none;
-  border-color: rgba(123, 140, 255, 0.55);
+  padding: 0;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
 }
 
-.mcapture input::placeholder { color: var(--text-faint); }
+.capture input::placeholder { color: var(--text-faint); }
+
+.msection { display: flex; flex-direction: column; }
 
 .mrow {
   display: flex;
@@ -430,24 +456,55 @@ h2 {
   transition: opacity 0.1s ease, color 0.1s ease;
 }
 
-.mrow:hover .mdel { opacity: 1; }
+.mrow:hover .mdel,
+.mnote:hover .mdel { opacity: 1; }
 
 .mdel:hover { color: var(--danger); }
 
 .mrow-wrap { display: flex; flex-direction: column; }
 
+/* the app's tier divider: the bars sit centered BETWEEN two hairlines —
+   a labeled rule, not a line with a prefix */
 .tier-divider {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 7px 0 2px;
+  gap: 6px;
+  margin: 8px 0 2px;
 }
 
+.tier-divider::before,
 .tier-divider::after {
   content: '';
   flex: 1;
   height: 1px;
   background: var(--border);
+}
+
+/* note cards speak the capture-line language: square corners, soft bg,
+   content first; the project label sits top-right, delete appears on hover */
+.mnote {
+  position: relative;
+  background: var(--bg-soft);
+  padding: 8px 76px 8px 10px;
+  margin-bottom: 6px;
+}
+
+.mnote-body {
+  white-space: pre-line;
+  line-height: 1.45;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.mnote-meta {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* the log panel — the product's thesis made visible */
@@ -583,19 +640,19 @@ h2 {
   border-radius: 12px;
 }
 
-/* ---- features ------------------------------------------------------------ */
+/* ---- features ------------------------------------------------------------- */
 
+/* borderless editorial grid: each feature is a hairline-topped column of
+   type — no cards, no boxes; the whitespace and the rules carry the grid */
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 44px 40px;
 }
 
 .feature-card {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 20px;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
 }
 
 .feature-label {
@@ -603,13 +660,14 @@ h2 {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-faint);
-  margin-bottom: 10px;
+  color: var(--accent);
+  margin-bottom: 12px;
 }
 
 .feature-title {
-  font-size: 15.5px;
+  font-size: 16px;
   font-weight: 600;
+  letter-spacing: -0.005em;
   margin-bottom: 8px;
 }
 
@@ -624,12 +682,7 @@ h2 {
 
 /* ---- keyboard ------------------------------------------------------------ */
 
-.kb-card {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 22px;
-}
+.kb-card { padding: 0; }
 
 .kb-row {
   display: grid;
@@ -682,7 +735,7 @@ h2 {
 /* ---- footer ---------------------------------------------------------------- */
 
 .footer {
-  margin-top: 96px;
+  margin-top: 88px;
   padding-top: 26px;
   padding-bottom: 40px;
   border-top: 1px solid var(--border);
