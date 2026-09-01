@@ -4,9 +4,9 @@ import { Analytics, track } from '@vercel/analytics/react'
 import MiniDayApp from './MiniDayApp'
 
 const GITHUB = 'https://github.com/faraz-35/dayapp'
-const RELEASE = 'https://github.com/faraz-35/dayapp/releases/tag/v0.1.2'
+const RELEASE = 'https://github.com/faraz-35/dayapp/releases/tag/v0.2.0'
 const DMG_URL =
-  'https://github.com/faraz-35/dayapp/releases/download/v0.1.2/DayApp_0.1.2_aarch64.dmg'
+  'https://github.com/faraz-35/dayapp/releases/download/v0.2.0/DayApp_0.2.0_aarch64.dmg'
 const HERO_LINE = 'a live today list that journals itself'
 
 const FEATURES: { label: string; title: string; body: ReactNode }[] = [
@@ -180,7 +180,7 @@ export default function App() {
             </a>
           </div>
           <p className="fx d4 cta-note">
-            v0.1.2 · Apple Silicon · unsigned build. On first launch, right-click the app and
+            v0.2.0 · Apple Silicon · unsigned build. On first launch, right-click the app and
             choose Open. <a href={RELEASE}>Release notes</a>
           </p>
         </div>
