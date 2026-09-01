@@ -263,7 +263,7 @@ export default function MiniDayApp() {
               aria-label="add a task"
             />
           </form>
-          {SECTIONS.map((section) => (
+          {SECTIONS.filter((s) => s !== 'backlog').map((section) => (
             <section className="msection" key={section}>
               <div className="stack-head">{section}</div>
               {items
