@@ -89,12 +89,17 @@ h2 {
   line-height: 1.65;
 }
 
-/* ---- hero --------------------------------------------------------------- */
+/* ---- hero: exactly the first screen -------------------------------------- */
 
 .hero {
   position: relative;
-  padding: 110px 0 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
+  padding: 0 28px;
 }
 
 /* the one decorative move: a faint accent glow behind the wordmark */
@@ -128,19 +133,18 @@ h2 {
 }
 
 .hero h1 {
-  font-size: clamp(18px, 2.8vw, 26px);
+  font-size: clamp(20px, 3vw, 30px);
   font-weight: 500;
   letter-spacing: -0.005em;
   margin: 18px 0 0;
   color: var(--text);
 }
 
-.hero-sub {
-  color: var(--text-dim);
-  font-size: 15px;
-  line-height: 1.7;
-  max-width: 560px;
-  margin: 18px 0 0;
+/* the braces read as the token grammar: mono, quiet */
+.brace {
+  font-family: var(--mono);
+  font-weight: 400;
+  color: var(--text-faint);
 }
 
 .cta-row {
@@ -180,61 +184,38 @@ h2 {
 
 .btn-ghost:hover { background: var(--bg-hover); border-color: #2e323b; }
 
-.cta-note {
-  margin-top: 16px;
-  font-size: 12.5px;
-  color: var(--text-faint);
-  line-height: 1.6;
-}
-
-.cta-note a { color: var(--text-dim); }
-
 /* hero entrance — quiet, quick */
 .fx { animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
 .d1 { animation-delay: 0.07s; }
 .d2 { animation-delay: 0.14s; }
-.d3 { animation-delay: 0.21s; }
-.d4 { animation-delay: 0.28s; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(10px); }
 }
 
-/* ---- the quote band (the quote modal's voice, as a full-bleed strip) ---- */
+/* ---- live demo: the second screen, full width ---------------------------- */
 
-.quote-band {
-  background: #0b0c0e;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  text-align: center;
-  padding: 84px 28px;
-  margin-top: 88px;
+.demo-section {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 28px;
 }
 
-.quote-band p {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: clamp(20px, 3.4vw, 30px);
-  line-height: 1.55;
-  margin: 0 auto;
-  max-width: 760px;
-}
-
-.quote-band span {
-  display: block;
-  margin-top: 22px;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  color: var(--text-faint);
-}
-
-/* ---- live demo: the mini window + the log ------------------------------- */
+.demo-section h2 { margin-bottom: 28px; }
 
 .demo-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 22px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
+}
+
+/* the log is opt-in: the ≡ button on the window chrome opens it as a column */
+.demo-grid.show-log {
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 22px;
 }
 
 .app-window {
@@ -264,7 +245,8 @@ h2 {
   color: var(--text);
 }
 
-.win-reset {
+.win-reset,
+.win-log {
   position: absolute;
   right: 10px;
   top: 50%;
@@ -282,6 +264,10 @@ h2 {
   cursor: pointer;
   transition: color 0.1s ease, background 0.1s ease;
 }
+
+.win-log { right: 42px; }
+
+.win-log:hover, .win-log.on { color: var(--accent); }
 
 .win-reset:hover { color: var(--text); background: var(--bg-hover); }
 
@@ -515,6 +501,7 @@ h2 {
   border-radius: 12px;
   padding: 14px 18px 10px;
   min-height: 320px;
+  animation: rise 0.22s ease both;
 }
 
 .log-head {
@@ -525,13 +512,6 @@ h2 {
   color: var(--text-dim);
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
-}
-
-.log-head span {
-  text-transform: none;
-  letter-spacing: 0;
-  font-weight: 400;
-  color: var(--text-faint);
 }
 
 .log-empty {
@@ -760,14 +740,14 @@ h2 {
 /* ---- responsive ------------------------------------------------------------ */
 
 @media (max-width: 900px) {
-  .demo-grid { grid-template-columns: 1fr; }
+  .demo-grid.show-log { grid-template-columns: minmax(0, 1fr); }
+  .demo-section { padding: 48px 20px; }
   .shots { grid-template-columns: 1fr; }
   .kb-row { grid-template-columns: 1fr; gap: 8px; }
-  .hero { padding-top: 84px; }
 }
 
 @media (max-width: 520px) {
   .wrap { padding: 0 20px; }
-  .quote-band { padding: 64px 20px; }
+  .hero { padding: 0 20px; }
   .log-panel { min-height: 0; }
 }

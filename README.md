@@ -3,8 +3,9 @@
 The landing page for [DayApp](https://github.com/faraz-35/dayapp) — a Vite + React + TS static
 site in DayApp's own design tokens (always dark, one accent, serif-italic brand moments).
 
-The hero's mini-DayApp is live React state: completing and capturing tasks writes a visible
-`actions` log — the product's thesis, demonstrated.
+The first two screens: a one-line hero, then a full-width working mini-DayApp — live React
+state, where completing and capturing tasks writes a visible `actions` log (behind the ≡
+button on the window chrome).
 
 ## Develop
 

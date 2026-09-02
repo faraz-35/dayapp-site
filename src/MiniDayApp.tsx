@@ -2,9 +2,9 @@ import { useRef, useState } from 'react'
 
 /* A working miniature of DayApp's main page, in the browser: Notes above the
    task stack, one capture bar routing to three sections, tier dividers with
-   the label centered between two hairlines — and a live "actions" log beside
-   it. Tasks log themselves (the thesis); notes deliberately don't (content,
-   not activity) — exactly the app's rule. */
+   the label centered between two hairlines — and a live "actions" log behind
+   the ≡ button on the window chrome. Tasks log themselves (the thesis); notes
+   deliberately don't (content, not activity) — exactly the app's rule. */
 
 type Section = 'today' | 'daily' | 'backlog'
 type Priority = 1 | 2 | 3 | null
@@ -170,6 +170,7 @@ export default function MiniDayApp() {
   const [items, setItems] = useState<Item[]>(seedTasks)
   const [notes, setNotes] = useState<Note[]>(() => SEED_NOTES.map((s, i) => ({ ...s, id: i + 1 })))
   const [log, setLog] = useState<LogEntry[]>(() => SEED_LOG.map((s, i) => ({ ...s, id: i + 1 })))
+  const [showLog, setShowLog] = useState(false)
   const logId = useRef(SEED_LOG.length)
 
   function record(verb: string, text: string, tone: LogEntry['tone']) {
@@ -225,10 +226,18 @@ export default function MiniDayApp() {
     .sort((a, b) => tierRank(a.priority) - tierRank(b.priority) || a.id - b.id)
 
   return (
-    <div className="demo-grid">
+    <div className={'demo-grid' + (showLog ? ' show-log' : '')}>
       <div className="app-window">
         <div className="win-header">
           <span className="win-title">Live @ Demo</span>
+          <button
+            className={'win-log' + (showLog ? ' on' : '')}
+            onClick={() => setShowLog((v) => !v)}
+            title={showLog ? 'hide the log' : 'show the log'}
+            aria-pressed={showLog}
+          >
+            ≡
+          </button>
           <button className="win-reset" onClick={reset} title="reset the demo">↺</button>
         </div>
         <div className="win-body">
@@ -242,7 +251,7 @@ export default function MiniDayApp() {
               e.currentTarget.reset()
             }}
           >
-            <input placeholder="Add a note — end with !1 or #tag to mark it" aria-label="add a note" />
+            <input placeholder="Add a note — end with !1 or #tag" aria-label="add a note" />
           </form>
           {notes.map((n) => (
             <NoteCard key={n.id} note={n} onRemove={() => removeNote(n)} />
@@ -259,7 +268,7 @@ export default function MiniDayApp() {
             }}
           >
             <input
-              placeholder="Add a task — plain for Today, ##d / ##b to route, !1 #tag @ to mark"
+              placeholder="Add a task — plain lands in Today; ##d / ##b route; !1 #tag @ mark"
               aria-label="add a task"
             />
           </form>
@@ -299,27 +308,22 @@ export default function MiniDayApp() {
         </div>
       </div>
 
-      <aside className="log-panel">
-        <div className="log-head">
-          actions <span>— the journal writes itself</span>
-        </div>
-        {log.length === 0 ? (
-          <div className="log-empty">
-            Every create, complete, uncomplete and delete lands here, timestamped — try the circles,
-            or capture a task ending in <code>!1</code>, <code>#tag</code> or a bare <code>@</code>.
-            In the real app this log is the journal, the analytics, the week in review: no separate
-            journal to keep. Notes never appear here — they are content, not activity.
-          </div>
-        ) : (
-          log.map((e) => (
-            <div key={e.id} className={'log-row ' + e.tone}>
-              <span className="log-verb">{e.verb}</span>
-              <span className="log-text">{e.text}</span>
-              <span className="log-at">{e.at}</span>
-            </div>
-          ))
-        )}
-      </aside>
+      {showLog && (
+        <aside className="log-panel">
+          <div className="log-head">actions</div>
+          {log.length === 0 ? (
+            <div className="log-empty">Every create, complete and delete lands here, timestamped.</div>
+          ) : (
+            log.map((e) => (
+              <div key={e.id} className={'log-row ' + e.tone}>
+                <span className="log-verb">{e.verb}</span>
+                <span className="log-text">{e.text}</span>
+                <span className="log-at">{e.at}</span>
+              </div>
+            ))
+          )}
+        </aside>
+      )}
     </div>
   )
 }

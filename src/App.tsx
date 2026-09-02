@@ -4,109 +4,44 @@ import { Analytics, track } from '@vercel/analytics/react'
 import MiniDayApp from './MiniDayApp'
 
 const GITHUB = 'https://github.com/faraz-35/dayapp'
-const RELEASE = 'https://github.com/faraz-35/dayapp/releases/tag/v0.2.0'
 const DMG_URL =
   'https://github.com/faraz-35/dayapp/releases/download/v0.2.0/DayApp_0.2.0_aarch64.dmg'
-const HERO_LINE = 'a live today list that journals itself'
 
 const FEATURES: { label: string; title: string; body: ReactNode }[] = [
   {
     label: 'the list',
     title: 'Today · Daily · Backlog',
-    body: (
-      <>
-        Drag tasks between three sections. At midnight the unfinished Today tasks drop into the
-        Backlog, daily habits reset, and finished rows disappear. No scheduler does this. The app
-        checks the date whenever it draws the list.
-      </>
-    ),
+    body: 'At midnight unfinished tasks fall to the Backlog and dailies reset. No scheduler — just a date check.',
   },
   {
     label: 'the notepad',
     title: 'Notes live here too',
     body: (
       <>
-        A notepad above the list — ideas, checklists, pasted text. Notes take the same typed marks
-        as tasks (<code>!1</code>, <code>#tag</code>), group by priority, and export as .txt. One
-        window instead of two apps.
+        A notepad above the list. Notes take the same <code>!1</code> and <code>#tag</code> marks,
+        group by priority, export as .txt.
       </>
     ),
   },
   {
     label: 'typed metadata',
     title: '!1 · #tag · @',
-    body: (
-      <>
-        Details go in the line as you type: <code>!1</code> sets a priority, <code>#tag</code>{' '}
-        files it under a project, <code>@</code> marks it for your agent. There are no menus to
-        open; the line you typed is the whole input.
-      </>
-    ),
+    body: 'Priority, project, agent — typed into the line. No menus to open.',
   },
   {
     label: 'the journal',
     title: 'The log writes itself',
-    body: (
-      <>
-        Every task you add, finish, or move is written down with its time. That record{' '}
-        <em>is</em> the journal; you never write it yourself. &ldquo;What did I do this week?&rdquo;{' '}
-        is one query. From the notes box, <code>##j</code> saves a line of reflection to it.
-      </>
-    ),
-  },
-  {
-    label: 'identity',
-    title: 'Goals, three horizons',
-    body: (
-      <>
-        Goals sit above everything: timeless, long term, short term. They are the reason the daily
-        work happens. Achieve one and it is kept, dated with the month you hit it, not deleted.
-      </>
-    ),
+    body: 'Every add, finish and move is timestamped. That record is the journal; you never write it.',
   },
   {
     label: 'time',
     title: 'One honest timer',
-    body: (
-      <>
-        One timer runs at a time. Press ▶ to start it, ⏸ to stop it, and the app totals the time
-        per task and per day. Quit mid-task and the clock picks up where it left off on the next
-        launch.
-      </>
-    ),
+    body: 'One timer at a time, totaled per task and per day. It survives restarts.',
   },
   {
     label: 'analytics',
     title: 'The week in review',
-    body: (
-      <>
-        A page of answers: what you finished, your streak, missed habits, a month heatmap, and
-        time split by project and priority. Change a task's project later and its history stays
-        exactly as it was.
-      </>
-    ),
-  },
-  {
-    label: 'delegation',
-    title: 'Hand work to an agent',
-    body: (
-      <>
-        A task marked <code>@</code> goes into the agent queue, and the task's own notes are its
-        instructions. From a terminal, an AI session can claim a task, do the work, and check it
-        off over SSH.
-      </>
-    ),
-  },
-  {
-    label: 'everywhere',
-    title: 'Terminal and phone',
-    body: (
-      <>
-        The same binary is also a terminal client: <code>--list</code>, <code>--complete</code>,{' '}
-        <code>--journal</code> over SSH. An Android app mirrors the list and sends quick captures
-        back to the Mac, which stays the only place that writes.
-      </>
-    ),
+    body: 'Streaks, missed habits, a month heatmap, time by project — read straight off the log.',
   },
 ]
 
@@ -157,60 +92,30 @@ export default function App() {
 
   return (
     <>
-      {/* ---------- hero ---------- */}
+      {/* ---------- hero: one line, one screen ---------- */}
       <header className="hero">
-        <div className="wrap hero-inner">
-          <div className="fx d0 wordmark">DayApp</div>
-          <h1 className="fx d1">{HERO_LINE}</h1>
-          <p className="fx d2 hero-sub">
-            A to-do list and a notes app in one native macOS window — and because every action is
-            timestamped as you work, the journal, the weekly review and the streaks all exist
-            already.
-            <br />
-            No cron · no cloud · no accounts. Open source on GitHub.
-          </p>
-          <div className="fx d3 cta-row">
+        <div className="hero-inner">
+          <div className="fx wordmark">DayApp</div>
+          <h1 className="fx d1">
+            The most <span className="brace">{'{'}</span> Simple &amp; Powerful{' '}
+            <span className="brace">{'}'}</span> Notes &amp; To-do app
+          </h1>
+          <div className="fx d2 cta-row">
             <a className="btn-primary" href={DMG_URL} onClick={() => track('download_dmg')}>
               Download for Mac ↧
             </a>
             <a className="btn-ghost" href={GITHUB}>
               View the source ↗
             </a>
-            <a className="btn-ghost" href="#watch">
-              Watch the demo ↓
-            </a>
           </div>
-          <p className="fx d4 cta-note">
-            v0.2.0 · Apple Silicon · unsigned build. On first launch, right-click the app and
-            choose Open. <a href={RELEASE}>Release notes</a>
-          </p>
         </div>
       </header>
 
-      {/* ---------- live demo ---------- */}
-      <Section
-        eyebrow="live, in your browser"
-        title="Don't read about it — use it"
-        sub={
-          <>
-            This is real React state, not a video. Add a note, capture a task — a plain line lands
-            in Today, <code>##b</code> routes it to the Backlog — and watch the log on the right
-            write the journal for you. <code>↺</code> resets the demo.
-          </>
-        }
-      >
+      {/* ---------- live demo: the second screen, full width ---------- */}
+      <section className="demo-section">
+        <h2>Working demo</h2>
         <MiniDayApp />
-      </Section>
-
-      {/* ---------- the thesis ---------- */}
-      <div className="quote-band">
-        <p>
-          Several behaviours that sound like features
-          <br />
-          are just queries over timestamped state.
-        </p>
-        <span>daily resets · the midnight sweep · reminders · the week in review — none of it is scheduled; all of it is derived</span>
-      </div>
+      </section>
 
       {/* ---------- videos ---------- */}
       <Section
@@ -257,17 +162,7 @@ export default function App() {
       </Section>
 
       {/* ---------- features ---------- */}
-      <Section
-        eyebrow="what's inside"
-        title="Everything reads one log"
-        sub={
-          <>
-            Nearly everything below writes to or reads from the same timestamped record — the
-            notes are the one guest that stays out of it. You use the app, it takes the notes;
-            there is no configuration and no background process.
-          </>
-        }
-      >
+      <Section eyebrow="what's inside" title="Everything reads one log">
         <div className="feature-grid">
           {FEATURES.map((f) => (
             <div className="feature-card" key={f.label}>
@@ -283,13 +178,7 @@ export default function App() {
       <Section
         eyebrow="the grammar"
         title="Keyboard-first, not keyboard-everything"
-        sub={
-          <>
-            One thing is focused at a time; addresses are typed directly and digits act on whatever
-            is focused — no modes, no menus. Drag-and-drop exists; <code>j</code>/<code>k</code>,{' '}
-            <code>Enter</code> and <code>e</code> are just faster.
-          </>
-        }
+        sub="One thing focused at a time; digits act on it — no modes, no menus."
       >
         <div className="kb-card">
           {KEYS.map(([keys, what]) => (
@@ -305,13 +194,7 @@ export default function App() {
       <Section
         eyebrow="built in the open"
         title="One person's daily tool, yours to fork"
-        sub={
-          <>
-            There's no team, no telemetry, no roadmap committee — the app you build from source is
-            the app that runs every day. Your data is one SQLite file you can open, query, and
-            snapshot. Fork it, steal the ideas, or build your day around it.
-          </>
-        }
+        sub="No team, no telemetry. Your data is one SQLite file — open it, query it, snapshot it."
       >
         <div className="terminal">
           <div className="tline"><span className="tp">$</span> git clone {GITHUB}.git</div>
