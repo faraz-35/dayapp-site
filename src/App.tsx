@@ -9,39 +9,44 @@ const DMG_URL =
 
 const FEATURES: { label: string; title: string; body: ReactNode }[] = [
   {
-    label: 'the list',
+    label: 'tasks',
     title: 'Today · Daily · Backlog',
-    body: 'At midnight unfinished tasks fall to the Backlog and dailies reset. No scheduler — just a date check.',
+    body: 'Three lists: what you’ll do today, what you do every day, and what’s saved for later. Don’t finish something? It waits in the Backlog.',
   },
   {
-    label: 'the notepad',
-    title: 'Notes live here too',
+    label: 'notes',
+    title: 'A notepad built in',
     body: (
       <>
-        A notepad above the list. Notes take the same <code>!1</code> and <code>#tag</code> marks,
-        group by priority, export as .txt.
+        Keep ideas, checklists and pasted text right above your tasks — one window instead of two
+        apps. Notes take the same priority and project tags as tasks.
       </>
     ),
   },
   {
-    label: 'typed metadata',
-    title: '!1 · #tag · @',
-    body: 'Priority, project, agent — typed into the line. No menus to open.',
+    label: 'input',
+    title: 'Organize as you type',
+    body: (
+      <>
+        Type <code>!1</code> to make something high priority, <code>#work</code> to file it under a
+        project, <code>@</code> to hand it to your AI agent. No menus, no forms.
+      </>
+    ),
   },
   {
-    label: 'the journal',
-    title: 'The log writes itself',
-    body: 'Every add, finish and move is timestamped. That record is the journal; you never write it.',
+    label: 'journal',
+    title: 'The journal writes itself',
+    body: 'Everything you add, finish or move is logged with its time, automatically. So “what did I do this week?” is already answered.',
   },
   {
-    label: 'time',
-    title: 'One honest timer',
-    body: 'One timer at a time, totaled per task and per day. It survives restarts.',
+    label: 'timer',
+    title: 'A timer on every task',
+    body: 'Start one to see how long things really take. Time adds up per task and per day — and it keeps running if you close the app.',
   },
   {
     label: 'analytics',
-    title: 'The week in review',
-    body: 'Streaks, missed habits, a month heatmap, time by project — read straight off the log.',
+    title: 'See what you did',
+    body: 'An analytics page shows what you completed last week or last month, your streak, missed habits, and where your time went.',
   },
 ]
 
@@ -56,14 +61,14 @@ const KEYS: [string, string][] = [
 
 function Section({ id, eyebrow, title, sub, children }: {
   id?: string
-  eyebrow: string
+  eyebrow?: string
   title: string
   sub?: ReactNode
   children: ReactNode
 }) {
   return (
     <section id={id} className="wrap section">
-      <div className="eyebrow">{eyebrow}</div>
+      {eyebrow && <div className="eyebrow">{eyebrow}</div>}
       <h2>{title}</h2>
       {sub && <p className="section-sub">{sub}</p>}
       {children}
@@ -162,7 +167,7 @@ export default function App() {
       </Section>
 
       {/* ---------- features ---------- */}
-      <Section eyebrow="what's inside" title="Everything reads one log">
+      <Section title="What's inside">
         <div className="feature-grid">
           {FEATURES.map((f) => (
             <div className="feature-card" key={f.label}>

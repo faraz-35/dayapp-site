@@ -193,9 +193,11 @@ h2 {
   from { opacity: 0; transform: translateY(10px); }
 }
 
-/* ---- live demo: the second screen, full width ---------------------------- */
+/* ---- live demo: the second screen, the site's own column ----------------- */
 
 .demo-section {
+  max-width: 1080px;
+  margin: 0 auto;
   min-height: 100vh;
   min-height: 100svh;
   display: flex;
