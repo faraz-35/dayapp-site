@@ -156,6 +156,12 @@ h2 {
 
 .cta-row.center { justify-content: center; margin-top: 28px; }
 
+.hero-meta {
+  margin-top: 22px;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
 .btn-primary {
   display: inline-block;
   background: var(--accent);
@@ -188,6 +194,7 @@ h2 {
 .fx { animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
 .d1 { animation-delay: 0.07s; }
 .d2 { animation-delay: 0.14s; }
+.d3 { animation-delay: 0.21s; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(10px); }
@@ -704,6 +711,23 @@ h2 {
   line-height: 1.9;
   overflow-x: auto;
   margin-bottom: 8px;
+}
+
+.tlabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 28px 0 10px;
+}
+
+.install-note {
+  color: var(--text-faint);
+  font-size: 12.5px;
+  line-height: 1.65;
+  max-width: 640px;
+  margin: 14px 0 0;
 }
 
 .tline { white-space: nowrap; }

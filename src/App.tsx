@@ -122,6 +122,7 @@ export default function App() {
               View the source ↗
             </a>
           </div>
+          <div className="fx d3 hero-meta">Apple Silicon (M1 or later)</div>
         </div>
       </header>
 
@@ -215,6 +216,17 @@ export default function App() {
         title="One person's daily tool, yours to fork"
         sub="No team, no telemetry. Your data is one SQLite file — open it, query it, snapshot it."
       >
+        <div className="tlabel">Install with Homebrew</div>
+        <div className="terminal">
+          <div className="tline"><span className="tp">$</span> brew tap faraz-35/tap</div>
+          <div className="tline">
+            <span className="tp">$</span> brew trust faraz-35/tap
+            <span className="tc">   # one-time — Homebrew 6 only runs trusted taps</span>
+          </div>
+          <div className="tline"><span className="tp">$</span> brew install --cask dayapp</div>
+        </div>
+
+        <div className="tlabel">Or build from source</div>
         <div className="terminal">
           <div className="tline"><span className="tp">$</span> git clone {GITHUB}.git</div>
           <div className="tline"><span className="tp">$</span> cd dayapp &&amp; npm install</div>
@@ -230,6 +242,11 @@ export default function App() {
             github.com/faraz-35/dayapp ↗
           </a>
         </div>
+        <p className="install-note">
+          Installing from the .dmg above: the first open may warn that the app “can’t be verified” —
+          it isn’t signed with a paid Apple developer certificate. Allow it in System Settings →
+          Privacy &amp; Security → Open Anyway. Homebrew installs skip this.
+        </p>
       </Section>
 
       {/* ---------- footer ---------- */}
