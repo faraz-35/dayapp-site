@@ -76,14 +76,23 @@ function Section({ id, eyebrow, title, sub, children }: {
   )
 }
 
-type MediaTab = 'short' | 'full' | 'shots'
+type MediaTab = 'notes' | 'tasks' | 'analytics' | 'shots'
 
 const MEDIA_TABS: { id: MediaTab; label: string; caption: string }[] = [
-  { id: 'short', label: 'Short · 1:25', caption: 'The whole idea in one sitting.' },
   {
-    id: 'full',
-    label: 'Full tour · 5:42',
-    caption: 'Capture, timers, notes, journal, goals, analytics, delegation — everything.',
+    id: 'notes',
+    label: 'Notes · 2:01',
+    caption: 'Create a note, edit it, hide it — first with the mouse, then with the keyboard.',
+  },
+  {
+    id: 'tasks',
+    label: 'Tasks · 1:59',
+    caption: 'Create, time, link, complete and delete tasks — mouse first, then keys only.',
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics · 0:43',
+    caption: 'The week on one page — pick a day, filter by project or priority.',
   },
   {
     id: 'shots',
@@ -93,7 +102,7 @@ const MEDIA_TABS: { id: MediaTab; label: string; caption: string }[] = [
 ]
 
 export default function App() {
-  const [mediaTab, setMediaTab] = useState<MediaTab>('short')
+  const [mediaTab, setMediaTab] = useState<MediaTab>('notes')
 
   return (
     <>
@@ -126,7 +135,7 @@ export default function App() {
       <Section
         id="watch"
         eyebrow="on film"
-        title="Watch it work — pick a format"
+        title="Watch it work — pick a demo"
         sub={
           <>
             Filmed entirely inside the app's built-in <em>demo mode</em> — a disposable seeded
@@ -147,14 +156,19 @@ export default function App() {
             </button>
           ))}
         </div>
-        {mediaTab === 'short' && (
-          <video className="reel" controls preload="metadata" poster="/assets/poster-short.jpg" playsInline>
-            <source src="/assets/demo-dayapp-short.mp4" type="video/mp4" />
+        {mediaTab === 'notes' && (
+          <video className="reel" controls preload="metadata" poster="/assets/poster-notes.jpg" playsInline>
+            <source src="/assets/demo-notes.mp4" type="video/mp4" />
           </video>
         )}
-        {mediaTab === 'full' && (
-          <video className="reel" controls preload="metadata" poster="/assets/poster-full.jpg" playsInline>
-            <source src="/assets/demo-dayapp.mp4" type="video/mp4" />
+        {mediaTab === 'tasks' && (
+          <video className="reel" controls preload="metadata" poster="/assets/poster-tasks.jpg" playsInline>
+            <source src="/assets/demo-tasks.mp4" type="video/mp4" />
+          </video>
+        )}
+        {mediaTab === 'analytics' && (
+          <video className="reel" controls preload="metadata" poster="/assets/poster-analytics.jpg" playsInline>
+            <source src="/assets/demo-analytics.mp4" type="video/mp4" />
           </video>
         )}
         {mediaTab === 'shots' && (

@@ -1,0 +1,16 @@
+21:37:42 site: build started (tsc --noEmit + vite)
+21:37:44 site: build OK
+  ➜  Local:   http://localhost:4173/
+  ➜  Network: use --host to expose
+21:37:59 site: vite preview on :4173
+21:43:55 site: verified (hero 100vh/1 line, demo 2nd screen full-width + ≡ log toggle, quote band gone, 6 features), committing
+21:44:06 site: vercel --prod deploy started
+21:44:09 site: deploy finished
+21:45:15 site: deploy retry, full output
+21:45:30 site: retry done
+21:46:14 site: shipped — prod verified (new bundle live), pushed origin/main
+21:54:54 site: rev2 — demo in 1080px column, features rewritten plain
+  ➜  Local:   http://localhost:4173/
+  ➜  Network: use --host to expose
+21:57:03 site: rev2 verified (demo 1080px col, plain features), deploying
+21:57:21 site: rev2 deploy done
