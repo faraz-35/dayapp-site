@@ -51,24 +51,29 @@ const FEATURES: { label: string; title: string; body: ReactNode }[] = [
 ]
 
 const KEYS: [string, string][] = [
-  ['⌘P', 'the command palette — every toggle, view and action'],
-  ['⌘F', 'search; a leading # flips to projects, @ to the agent filter'],
-  ['nn', 'focus the notes capture; nt · nd · nb focus the task capture, routed'],
-  ['t1–9 · b41–49', 'address a row directly — digits 1–6 act on it'],
-  ['e · Enter', 'edit · complete'],
-  ['j / k', 'walk the rows — or scroll, when nothing is focused'],
+  ['⌘P', 'open the command palette — every toggle, view and action'],
+  ['⌘F', 'search tasks; type # for projects, @ for agent tasks'],
+  ['nn', 'focus the notes capture'],
+  ['nt', 'focus the task capture — the task lands in Today'],
+  ['nd', 'focus the task capture — the task lands in Daily'],
+  ['nb', 'focus the task capture — the task lands in Backlog'],
+  ['t1–9', 'jump to a Today task — digits 1–6 then act on it'],
+  ['d1–9', 'jump to a Daily task'],
+  ['b11–49', 'jump to a Backlog task'],
+  ['n11–49', 'jump to a note'],
+  ['e', 'edit the focused thing'],
+  ['Enter', 'complete the focused task'],
+  ['j / k', 'move down / up the rows — or scroll when nothing is focused'],
 ]
 
-function Section({ id, eyebrow, title, sub, children }: {
+function Section({ id, title, sub, children }: {
   id?: string
-  eyebrow?: string
   title: string
   sub?: ReactNode
   children: ReactNode
 }) {
   return (
     <section id={id} className="wrap section">
-      {eyebrow && <div className="eyebrow">{eyebrow}</div>}
       <h2>{title}</h2>
       {sub && <p className="section-sub">{sub}</p>}
       {children}
@@ -122,20 +127,21 @@ export default function App() {
               View the source ↗
             </a>
           </div>
-          <div className="fx d3 hero-meta">Apple Silicon (M1 or later)</div>
+          <div className="fx d3 hero-line">Notes · Tasks · Journal · Timers · Analytics</div>
         </div>
       </header>
 
       {/* ---------- live demo: the second screen, full width ---------- */}
       <section className="demo-section">
-        <h2>Working demo</h2>
-        <MiniDayApp />
+        <div className="wrap">
+          <h2>Working demo</h2>
+          <MiniDayApp />
+        </div>
       </section>
 
       {/* ---------- videos ---------- */}
       <Section
         id="watch"
-        eyebrow="on film"
         title="Watch it work — pick a demo"
         sub={
           <>
@@ -196,8 +202,7 @@ export default function App() {
 
       {/* ---------- keyboard ---------- */}
       <Section
-        eyebrow="the grammar"
-        title="Keyboard-first, not keyboard-everything"
+        title="Keyboard-first"
         sub="One thing focused at a time; digits act on it — no modes, no menus."
       >
         <div className="kb-card">
@@ -211,11 +216,7 @@ export default function App() {
       </Section>
 
       {/* ---------- open source ---------- */}
-      <Section
-        eyebrow="built in the open"
-        title="One person's daily tool, yours to fork"
-        sub="No team, no telemetry. Your data is one SQLite file — open it, query it, snapshot it."
-      >
+      <Section title="One person's daily tool, yours to fork">
         <div className="tlabel">Install with Homebrew</div>
         <div className="terminal">
           <div className="tline"><span className="tp">$</span> brew tap faraz-35/tap</div>
@@ -252,9 +253,9 @@ export default function App() {
       {/* ---------- footer ---------- */}
       <footer className="wrap footer">
         <span>
-          DayApp · built by Faraz Shah · MIT · <a href={GITHUB}>source</a>
+          DayApp · built by <a href="https://faraz-35.vercel.app">Faraz Shah</a> · MIT ·{' '}
+          <a href={GITHUB}>source</a>
         </span>
-        <span className="footer-line">the log is the journal</span>
       </footer>
       <Analytics />
     </>
