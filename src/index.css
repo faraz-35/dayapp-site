@@ -53,9 +53,10 @@ code {
 }
 
 .wrap {
+  width: 100%;
   max-width: 1080px;
   margin: 0 auto;
-  padding: 0 28px;
+  padding: 0 1px;
 }
 
 /* one vertical rhythm for the whole page: every gap between sections is the
@@ -624,16 +625,32 @@ h2 {
 /* ---- features ------------------------------------------------------------- */
 
 /* borderless editorial grid: each feature is a hairline-topped column of
-   type — no cards, no boxes; the whitespace and the rules carry the grid */
+   type — no cards, no boxes; the rules only sit BETWEEN rows, never above
+   the first (the column counts below match the grid breakpoints so the
+   first-row exemption follows the real row boundaries) */
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 44px 40px;
 }
 
 .feature-card {
   border-top: 1px solid var(--border);
   padding-top: 18px;
+}
+
+.feature-card:nth-child(-n+3) { border-top: none; }
+
+@media (max-width: 975px) {
+  .feature-grid { grid-template-columns: 1fr 1fr; }
+  .feature-card:nth-child(-n+3) { border-top: 1px solid var(--border); }
+  .feature-card:nth-child(-n+2) { border-top: none; }
+}
+
+@media (max-width: 655px) {
+  .feature-grid { grid-template-columns: 1fr; }
+  .feature-card:nth-child(-n+2) { border-top: 1px solid var(--border); }
+  .feature-card:first-child { border-top: none; }
 }
 
 .feature-label {
@@ -758,7 +775,5 @@ h2 {
 }
 
 @media (max-width: 520px) {
-  .wrap { padding: 0 20px; }
-  .hero { padding: 0 20px; }
   .log-panel { min-height: 0; }
 }

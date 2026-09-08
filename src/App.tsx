@@ -63,6 +63,7 @@ const KEYS: [string, string][] = [
   ['n11–49', 'jump to a note'],
   ['e', 'edit the focused thing'],
   ['Enter', 'complete the focused task'],
+  ['Esc', 'step back — close the open menu or edit, then clear the focus'],
   ['j / k', 'move down / up the rows — or scroll when nothing is focused'],
 ]
 
@@ -201,10 +202,7 @@ export default function App() {
       </Section>
 
       {/* ---------- keyboard ---------- */}
-      <Section
-        title="Keyboard-first"
-        sub="One thing focused at a time; digits act on it — no modes, no menus."
-      >
+      <Section title="Keyboard-first">
         <div className="kb-card">
           {KEYS.map(([keys, what]) => (
             <div className="kb-row" key={keys}>
