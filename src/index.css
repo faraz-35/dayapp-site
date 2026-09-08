@@ -751,8 +751,7 @@ h2 {
 
 .footer {
   margin-top: 88px;
-  padding-top: 26px;
-  padding-bottom: 40px;
+  padding: 26px 20px 40px;
   border-top: 1px solid var(--border);
   display: flex;
   align-items: baseline;
@@ -775,6 +774,6 @@ h2 {
 }
 
 @media (max-width: 520px) {
-  .wrap { padding: 0 3px; }
+  .wrap { padding: 0 5px; }
   .log-panel { min-height: 0; }
 }
