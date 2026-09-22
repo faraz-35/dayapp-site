@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Analytics, track } from '@vercel/analytics/react'
 import MiniDayApp from './MiniDayApp'
@@ -6,6 +6,7 @@ import MiniDayApp from './MiniDayApp'
 const GITHUB = 'https://github.com/faraz-35/dayapp'
 const DMG_URL =
   'https://github.com/faraz-35/dayapp/releases/download/v0.3.0/DayApp_0.3.0_aarch64.dmg'
+const SITE_TITLE = 'DayApp — a to-do list and notes app that journals itself'
 
 const FEATURES: { label: string; title: string; body: ReactNode }[] = [
   {
@@ -107,8 +108,167 @@ const MEDIA_TABS: { id: MediaTab; label: string; caption: string }[] = [
   },
 ]
 
+type Route = 'home' | 'privacy' | 'terms'
+
+function routeOf(): Route {
+  if (location.hash.startsWith('#/privacy')) return 'privacy'
+  if (location.hash.startsWith('#/terms')) return 'terms'
+  return 'home'
+}
+
+function useRoute(): Route {
+  const [route, setRoute] = useState<Route>(routeOf)
+  useEffect(() => {
+    let current = routeOf()
+    const onHash = () => {
+      const next = routeOf()
+      if (next !== current) {
+        current = next
+        setRoute(next)
+        window.scrollTo(0, 0)
+      }
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+  return route
+}
+
+function Footer() {
+  return (
+    <footer className="wrap footer">
+      <span>
+        DayApp · built by <a href="https://faraz-35.vercel.app">Faraz Shah</a> · MIT ·{' '}
+        <a href={GITHUB}>source</a> · <a href="#/privacy">privacy</a> ·{' '}
+        <a href="#/terms">terms</a>
+      </span>
+    </footer>
+  )
+}
+
+function LegalPage({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="legal wrap">
+      <a className="legal-back" href="#/">
+        ← Back to DayApp
+      </a>
+      <h1>{title}</h1>
+      {children}
+    </div>
+  )
+}
+
+function PrivacyPage() {
+  return (
+    <LegalPage title="Privacy">
+      <p>DayApp is a local Mac app. This page says what it stores and what it sends.</p>
+
+      <h3>The app</h3>
+      <ul>
+        <li>
+          Everything stays on your Mac, in one SQLite file:{' '}
+          <code>~/Library/Application Support/com.farazshah.dayapp/dayapp.db</code>
+        </li>
+        <li>No accounts, no telemetry, no crash reporting. The app makes no network requests on its own.</li>
+        <li>
+          The one exception is mobile sync, which is off until you turn it on. It reads and writes
+          two files in a GitHub repo you choose, with a token you create. Requests go straight from
+          your Mac to GitHub. There is no server of mine in between, because there is no server of
+          mine.
+        </li>
+        <li>
+          If something breaks, the log stays on your disk under{' '}
+          <code>~/Library/Logs/com.farazshah.dayapp/</code>
+        </li>
+      </ul>
+
+      <h3>This website</h3>
+      <ul>
+        <li>
+          The site is static files on Vercel. It counts anonymous page visits with Vercel Analytics:
+          no cookies, no ads, no cross-site tracking.
+        </li>
+        <li>Downloads are served from GitHub Releases.</li>
+      </ul>
+
+      <h3>Contact</h3>
+      <p>
+        Questions about any of this: open an issue at <a href={GITHUB}>github.com/faraz-35/dayapp</a>{' '}
+        or reach me through <a href="https://faraz-35.vercel.app">faraz-35.vercel.app</a>.
+      </p>
+    </LegalPage>
+  )
+}
+
+function TermsPage() {
+  return (
+    <LegalPage title="Terms">
+      <p>
+        DayApp is free, open-source software under the MIT license. Here is what that means in
+        plain words.
+      </p>
+
+      <h3>License</h3>
+      <p>
+        You can use, study, change and share DayApp freely. The full text is the{' '}
+        <a href={`${GITHUB}/blob/main/LICENSE`}>LICENSE file</a> in the repo. The software is
+        provided “as is”, without warranty of any kind. Its author is not liable for anything that
+        goes wrong.
+      </p>
+
+      <h3>Your data</h3>
+      <p>
+        Everything lives in one file on your Mac. The app has a built-in backup command (command
+        palette → Backups), but it only makes a copy when you ask. Keep backups of anything you
+        would hate to lose.
+      </p>
+
+      <h3>Requirements</h3>
+      <p>
+        Apple Silicon Macs. The app is not signed with a paid Apple certificate, so the first
+        launch may ask you to allow it in System Settings → Privacy &amp; Security. The source is
+        public — check it before you trust it; that is what open source is for.
+      </p>
+
+      <h3>Mobile sync</h3>
+      <p>
+        When you turn it on, you connect your own GitHub account and repo. GitHub&apos;s terms
+        apply to that traffic.
+      </p>
+
+      <h3>Changes</h3>
+      <p>If these terms change, the new version appears on this page.</p>
+    </LegalPage>
+  )
+}
+
 export default function App() {
   const [mediaTab, setMediaTab] = useState<MediaTab>('notes')
+  const route = useRoute()
+
+  useEffect(() => {
+    document.title = route === 'home' ? SITE_TITLE : `${route === 'privacy' ? 'Privacy' : 'Terms'} · DayApp`
+  }, [route])
+
+  if (route === 'privacy') {
+    return (
+      <>
+        <PrivacyPage />
+        <Footer />
+        <Analytics />
+      </>
+    )
+  }
+
+  if (route === 'terms') {
+    return (
+      <>
+        <TermsPage />
+        <Footer />
+        <Analytics />
+      </>
+    )
+  }
 
   return (
     <>
@@ -249,12 +409,7 @@ export default function App() {
       </Section>
 
       {/* ---------- footer ---------- */}
-      <footer className="wrap footer">
-        <span>
-          DayApp · built by <a href="https://faraz-35.vercel.app">Faraz Shah</a> · MIT ·{' '}
-          <a href={GITHUB}>source</a>
-        </span>
-      </footer>
+      <Footer />
       <Analytics />
     </>
   )

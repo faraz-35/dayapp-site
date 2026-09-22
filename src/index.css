@@ -765,6 +765,41 @@ h2 {
 .footer a { color: var(--text); text-decoration: none; }
 .footer a:hover { color: var(--accent); }
 
+/* ---- legal pages (#/privacy, #/terms) ------------------------------------- */
+
+.legal {
+  max-width: 720px;
+  padding: 88px 20px 0;
+}
+
+.legal-back {
+  color: var(--text-dim);
+  font-size: 14px;
+  text-decoration: none;
+}
+.legal-back:hover { color: var(--accent); }
+
+.legal h1 {
+  font-size: clamp(24px, 3.4vw, 32px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 18px 0 28px;
+}
+
+.legal h3 { font-size: 16px; font-weight: 600; margin: 32px 0 8px; }
+.legal p,
+.legal ul {
+  color: var(--text-dim);
+  font-size: 16px;
+  line-height: 1.65;
+  margin: 0 0 14px;
+}
+.legal ul { padding-left: 20px; }
+.legal li { margin-bottom: 6px; }
+.legal code { white-space: normal; word-break: break-all; }
+.legal a { color: var(--text); text-underline-offset: 2px; }
+.legal a:hover { color: var(--accent); }
+
 /* ---- responsive ------------------------------------------------------------ */
 
 @media (max-width: 900px) {
