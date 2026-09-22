@@ -138,9 +138,11 @@ function Footer() {
   return (
     <footer className="wrap footer">
       <span>
-        DayApp · built by <a href="https://faraz-35.vercel.app">Faraz Shah</a> · MIT ·{' '}
-        <a href={GITHUB}>source</a> · <a href="#/privacy">privacy</a> ·{' '}
-        <a href="#/terms">terms</a>
+        DayApp · built by <a href="https://faraz-35.vercel.app">Faraz Shah</a>
+      </span>
+      <a href={`${GITHUB}/blob/main/LICENSE`}>MIT</a>
+      <span>
+        <a href="#/privacy">privacy</a> · <a href="#/terms">terms</a>
       </span>
     </footer>
   )
