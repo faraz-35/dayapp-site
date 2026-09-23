@@ -760,11 +760,15 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
   border-radius: 6px;
-  color: var(--text-faint);
+  color: var(--accent);
   transition: background 0.08s ease, color 0.08s ease;
 }
-.copy-btn:hover { background: var(--bg-hover); color: var(--text); }
+.copy-btn:hover { background: var(--bg-hover); }
 .copy-btn.copied { color: var(--accent); }
 
 /* ---- site nav -------------------------------------------------------------- */
@@ -811,10 +815,18 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 section[id] { scroll-margin-top: 72px; }
 #top { scroll-margin-top: 0; }
 
-.hero-cmd { margin-top: 16px; }
-.hero-cmd .terminal {
+.hero-install {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.hero-install .terminal {
   width: fit-content;
   max-width: 100%;
+  padding: 14px 52px 14px 18px;
+  font-size: 13px;
 }
 
 .terminal a { color: var(--text); }
@@ -881,11 +893,13 @@ section[id] { scroll-margin-top: 72px; }
 }
 
 @media (max-width: 520px) {
-  .wrap { padding: 0 5px; }
+  .wrap { padding: 0 10px; }
+  .section { padding: 72px 10px 0; }
+  .hero { padding: 0 20px; }
+  .hero-install .terminal { padding: 12px 44px 12px 14px; font-size: 12px; }
   .log-panel { min-height: 0; }
   .site-nav-inner { height: 46px; padding: 0 12px; }
   .site-nav-links { gap: 14px; }
   .site-nav-links a { font-size: 12px; }
-  .terminal.snug { font-size: 11.5px; padding: 10px 42px 10px 12px; }
   .copy-btn { top: 8px; right: 8px; }
 }

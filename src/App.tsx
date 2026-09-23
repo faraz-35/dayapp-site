@@ -5,11 +5,6 @@ import MiniDayApp from './MiniDayApp'
 
 const GITHUB = 'https://github.com/faraz-35/dayapp'
 const INSTALL_CMD = 'curl -fsSL https://getdayapp.vercel.app/install.sh | sh'
-const BUILD_CMD = [
-  'git clone https://github.com/faraz-35/dayapp.git',
-  'cd dayapp && npm install',
-  'npm run tauri build',
-].join('\n')
 const SITE_TITLE = 'DayApp — a to-do list and notes app that journals itself'
 
 function CopyIcon() {
@@ -63,8 +58,8 @@ function CodeBox({ copy, snug, children }: {
 const NAV: [string, string][] = [
   ['Demos', '#watch'],
   ['Features', '#inside'],
-  ['Keyboard', '#keyboard'],
-  ['Install', '#install'],
+  ['Keybindings', '#keyboard'],
+  ['GitHub', '#code'],
 ]
 
 function SiteNav() {
@@ -319,15 +314,7 @@ function TermsPage() {
 
 export default function App() {
   const [mediaTab, setMediaTab] = useState<MediaTab>('notes')
-  const [copied, setCopied] = useState(false)
   const route = useRoute()
-
-  const copyInstall = () => {
-    navigator.clipboard?.writeText(INSTALL_CMD).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
-    }).catch(() => {})
-  }
 
   useEffect(() => {
     document.title = route === 'home' ? SITE_TITLE : `${route === 'privacy' ? 'Privacy' : 'Terms'} · DayApp`
@@ -364,20 +351,13 @@ export default function App() {
             The most <span className="brace">{'{'}</span> Simple &amp; Powerful{' '}
             <span className="brace">{'}'}</span> Notes &amp; To-do app
           </h1>
-          <div className="fx d2 cta-row">
-            <button className="btn-primary" onClick={copyInstall}>
-              {copied ? 'Copied — paste it in Terminal ↩' : 'Copy the install command'}
-            </button>
-            <a className="btn-ghost" href={GITHUB}>
-              View the source ↗
-            </a>
-          </div>
-          <div className="fx d2 hero-cmd">
+          <div className="fx d2 hero-line">Notes · Tasks · Journal · Timers · Analytics</div>
+          <div className="fx d2 hero-install">
+            <div className="tlabel">Install with one simple command</div>
             <CodeBox snug copy={INSTALL_CMD}>
               <div className="tline"><span className="tp">$</span> {INSTALL_CMD}</div>
             </CodeBox>
           </div>
-          <div className="fx d3 hero-line">Notes · Tasks · Journal · Timers · Analytics</div>
         </div>
       </header>
 
@@ -463,20 +443,7 @@ export default function App() {
       </Section>
 
       {/* ---------- open source ---------- */}
-      <Section id="install" title="One person's daily tool, yours to fork">
-        <div className="tlabel">Install with one line</div>
-        <CodeBox copy={INSTALL_CMD}>
-          <div className="tline"><span className="tp">$</span> {INSTALL_CMD}</div>
-        </CodeBox>
-
-        <div className="tlabel">Or build from source</div>
-        <CodeBox copy={BUILD_CMD}>
-          <div className="tline"><span className="tp">$</span> git clone {GITHUB}.git</div>
-          <div className="tline"><span className="tp">$</span> cd dayapp &amp;&amp; npm install</div>
-          <div className="tline">
-            <span className="tp">$</span> npm run tauri build<span className="tc">   # → DayApp.app</span>
-          </div>
-        </CodeBox>
+      <Section id="code" title="One person's daily tool, yours to fork">
         <div className="cta-row center">
           <a className="btn-ghost" href={GITHUB}>
             github.com/faraz-35/dayapp ↗
