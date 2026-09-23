@@ -5,6 +5,11 @@ import MiniDayApp from './MiniDayApp'
 
 const GITHUB = 'https://github.com/faraz-35/dayapp'
 const INSTALL_CMD = 'curl -fsSL https://getdayapp.vercel.app/install.sh | sh'
+const BUILD_CMD = [
+  'git clone https://github.com/faraz-35/dayapp.git',
+  'cd dayapp && npm install',
+  'npm run tauri build',
+].join('\n')
 const SITE_TITLE = 'DayApp — a to-do list and notes app that journals itself'
 
 function CopyIcon() {
@@ -21,6 +26,59 @@ function CheckIcon() {
     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
       <path d="m3.2 8.6 3.2 3.2 6.4-7.6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  )
+}
+
+// A terminal block with a corner copy button. The button copies `copy` (the
+// raw commands — display lines may carry comments the clipboard shouldn't),
+// flips to a check for a beat, and owns its own state so several boxes on
+// one page never desync.
+function CodeBox({ copy, snug, children }: {
+  copy: string
+  snug?: boolean
+  children: ReactNode
+}) {
+  const [copied, setCopied] = useState(false)
+  const doCopy = () => {
+    navigator.clipboard?.writeText(copy).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1600)
+    }).catch(() => {})
+  }
+  return (
+    <div className="codewrap">
+      <div className={snug ? 'terminal snug' : 'terminal'}>{children}</div>
+      <button
+        className={copied ? 'copy-btn copied' : 'copy-btn'}
+        onClick={doCopy}
+        title="Copy"
+        aria-label="Copy command"
+      >
+        {copied ? <CheckIcon /> : <CopyIcon />}
+      </button>
+    </div>
+  )
+}
+
+const NAV: [string, string][] = [
+  ['Demos', '#watch'],
+  ['Features', '#inside'],
+  ['Keyboard', '#keyboard'],
+  ['Install', '#install'],
+]
+
+function SiteNav() {
+  return (
+    <nav className="site-nav">
+      <div className="site-nav-inner">
+        <a className="site-nav-brand" href="#top">DayApp</a>
+        <div className="site-nav-links">
+          {NAV.map(([label, href]) => (
+            <a key={href} href={href}>{label}</a>
+          ))}
+        </div>
+      </div>
+    </nav>
   )
 }
 
@@ -262,20 +320,12 @@ function TermsPage() {
 export default function App() {
   const [mediaTab, setMediaTab] = useState<MediaTab>('notes')
   const [copied, setCopied] = useState(false)
-  const [copiedTerm, setCopiedTerm] = useState(false)
   const route = useRoute()
 
   const copyInstall = () => {
     navigator.clipboard?.writeText(INSTALL_CMD).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1600)
-    }).catch(() => {})
-  }
-
-  const copyInstallTerm = () => {
-    navigator.clipboard?.writeText(INSTALL_CMD).then(() => {
-      setCopiedTerm(true)
-      setTimeout(() => setCopiedTerm(false), 1600)
     }).catch(() => {})
   }
 
@@ -306,7 +356,8 @@ export default function App() {
   return (
     <>
       {/* ---------- hero: one line, one screen ---------- */}
-      <header className="hero">
+      <SiteNav />
+      <header className="hero" id="top">
         <div className="hero-inner">
           <div className="fx wordmark">DayApp</div>
           <h1 className="fx d1">
@@ -320,6 +371,11 @@ export default function App() {
             <a className="btn-ghost" href={GITHUB}>
               View the source ↗
             </a>
+          </div>
+          <div className="fx d2 hero-cmd">
+            <CodeBox snug copy={INSTALL_CMD}>
+              <div className="tline"><span className="tp">$</span> {INSTALL_CMD}</div>
+            </CodeBox>
           </div>
           <div className="fx d3 hero-line">Notes · Tasks · Journal · Timers · Analytics</div>
         </div>
@@ -382,7 +438,7 @@ export default function App() {
       </Section>
 
       {/* ---------- features ---------- */}
-      <Section title="What's inside">
+      <Section id="inside" title="What's inside">
         <div className="feature-grid">
           {FEATURES.map((f) => (
             <div className="feature-card" key={f.label}>
@@ -395,7 +451,7 @@ export default function App() {
       </Section>
 
       {/* ---------- keyboard ---------- */}
-      <Section title="Keyboard-first">
+      <Section id="keyboard" title="Keyboard-first">
         <div className="kb-card">
           {KEYS.map(([keys, what]) => (
             <div className="kb-row" key={keys}>
@@ -407,28 +463,20 @@ export default function App() {
       </Section>
 
       {/* ---------- open source ---------- */}
-      <Section title="One person's daily tool, yours to fork">
+      <Section id="install" title="One person's daily tool, yours to fork">
         <div className="tlabel">Install with one line</div>
-        <div className="terminal terminal-copy">
+        <CodeBox copy={INSTALL_CMD}>
           <div className="tline"><span className="tp">$</span> {INSTALL_CMD}</div>
-          <button
-            className={copiedTerm ? 'copy-btn copied' : 'copy-btn'}
-            onClick={copyInstallTerm}
-            title="Copy command"
-            aria-label="Copy install command"
-          >
-            {copiedTerm ? <CheckIcon /> : <CopyIcon />}
-          </button>
-        </div>
+        </CodeBox>
 
         <div className="tlabel">Or build from source</div>
-        <div className="terminal">
+        <CodeBox copy={BUILD_CMD}>
           <div className="tline"><span className="tp">$</span> git clone {GITHUB}.git</div>
-          <div className="tline"><span className="tp">$</span> cd dayapp &&amp; npm install</div>
+          <div className="tline"><span className="tp">$</span> cd dayapp &amp;&amp; npm install</div>
           <div className="tline">
             <span className="tp">$</span> npm run tauri build<span className="tc">   # → DayApp.app</span>
           </div>
-        </div>
+        </CodeBox>
         <div className="cta-row center">
           <a className="btn-ghost" href={GITHUB}>
             github.com/faraz-35/dayapp ↗
