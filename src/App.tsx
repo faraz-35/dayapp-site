@@ -5,6 +5,11 @@ import MiniDayApp from './MiniDayApp'
 
 const GITHUB = 'https://github.com/faraz-35/dayapp'
 const INSTALL_CMD = 'curl -fsSL https://getdayapp.vercel.app/install.sh | sh'
+const BUILD_CMD = [
+  'git clone https://github.com/faraz-35/dayapp.git',
+  'cd dayapp && npm install',
+  'npm run tauri build',
+].join('\n')
 const SITE_TITLE = 'DayApp — a to-do list and notes app that journals itself'
 
 function CopyIcon() {
@@ -444,6 +449,14 @@ export default function App() {
 
       {/* ---------- open source ---------- */}
       <Section id="code" title="One person's daily tool, yours to fork">
+        <div className="tlabel">Or build from source</div>
+        <CodeBox copy={BUILD_CMD}>
+          <div className="tline"><span className="tp">$</span> git clone {GITHUB}.git</div>
+          <div className="tline"><span className="tp">$</span> cd dayapp &amp;&amp; npm install</div>
+          <div className="tline">
+            <span className="tp">$</span> npm run tauri build<span className="tc">   # → DayApp.app</span>
+          </div>
+        </CodeBox>
         <div className="cta-row center">
           <a className="btn-ghost" href={GITHUB}>
             github.com/faraz-35/dayapp ↗
