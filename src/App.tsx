@@ -448,8 +448,7 @@ export default function App() {
       </Section>
 
       {/* ---------- open source ---------- */}
-      <Section id="code" title="One person's daily tool, yours to fork">
-        <div className="tlabel">Or build from source</div>
+      <Section id="code" title="GitHub">
         <CodeBox copy={BUILD_CMD}>
           <div className="tline"><span className="tp">$</span> git clone {GITHUB}.git</div>
           <div className="tline"><span className="tp">$</span> cd dayapp &amp;&amp; npm install</div>
