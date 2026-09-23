@@ -5,7 +5,7 @@ import MiniDayApp from './MiniDayApp'
 
 const GITHUB = 'https://github.com/faraz-35/dayapp'
 const DMG_URL =
-  'https://github.com/faraz-35/dayapp/releases/download/v0.3.0/DayApp_0.3.0_aarch64.dmg'
+  'https://github.com/faraz-35/dayapp/releases/download/v0.3.1/DayApp_0.3.1_aarch64.dmg'
 const SITE_TITLE = 'DayApp — a to-do list and notes app that journals itself'
 
 const FEATURES: { label: string; title: string; body: ReactNode }[] = [
