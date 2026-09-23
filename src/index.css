@@ -170,6 +170,8 @@ h2 {
 
 .btn-primary:hover { filter: brightness(1.1); }
 
+button.btn-primary { font: inherit; border: 0; cursor: pointer; }
+
 .btn-ghost {
   display: inline-block;
   border: 1px solid var(--border);

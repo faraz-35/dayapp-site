@@ -5,8 +5,8 @@
 #
 # Downloads DayApp from the latest GitHub release and installs it to
 # /Applications. Files fetched with curl carry no Gatekeeper quarantine
-# stamp, so the app opens without the "damaged" wall that browser and
-# Homebrew downloads hit on Apple Silicon. Your tasks live in ~/Library
+# stamp, so the app opens without the "damaged" wall that browser
+# downloads hit on Apple Silicon. Your tasks live in ~/Library
 # and are never touched by this script.
 
 set -eu

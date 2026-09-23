@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Analytics, track } from '@vercel/analytics/react'
+import { Analytics } from '@vercel/analytics/react'
 import MiniDayApp from './MiniDayApp'
 
 const GITHUB = 'https://github.com/faraz-35/dayapp'
-const DMG_URL =
-  'https://github.com/faraz-35/dayapp/releases/download/v0.3.1/DayApp_0.3.1_aarch64.dmg'
+const INSTALL_CMD = 'curl -fsSL https://getdayapp.vercel.app/install.sh | sh'
 const SITE_TITLE = 'DayApp — a to-do list and notes app that journals itself'
 
 const FEATURES: { label: string; title: string; body: ReactNode }[] = [
@@ -245,7 +244,15 @@ function TermsPage() {
 
 export default function App() {
   const [mediaTab, setMediaTab] = useState<MediaTab>('notes')
+  const [copied, setCopied] = useState(false)
   const route = useRoute()
+
+  const copyInstall = () => {
+    navigator.clipboard?.writeText(INSTALL_CMD).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1600)
+    }).catch(() => {})
+  }
 
   useEffect(() => {
     document.title = route === 'home' ? SITE_TITLE : `${route === 'privacy' ? 'Privacy' : 'Terms'} · DayApp`
@@ -282,9 +289,9 @@ export default function App() {
             <span className="brace">{'}'}</span> Notes &amp; To-do app
           </h1>
           <div className="fx d2 cta-row">
-            <a className="btn-primary" href={DMG_URL} onClick={() => track('download_dmg')}>
-              Download for Mac ↧
-            </a>
+            <button className="btn-primary" onClick={copyInstall}>
+              {copied ? 'Copied — paste it in Terminal ↩' : 'Copy the install command'}
+            </button>
             <a className="btn-ghost" href={GITHUB}>
               View the source ↗
             </a>
@@ -376,15 +383,15 @@ export default function App() {
 
       {/* ---------- open source ---------- */}
       <Section title="One person's daily tool, yours to fork">
-        <div className="tlabel">Install with Homebrew</div>
+        <div className="tlabel">Install with one line</div>
         <div className="terminal">
-          <div className="tline"><span className="tp">$</span> brew tap faraz-35/tap</div>
-          <div className="tline">
-            <span className="tp">$</span> brew trust faraz-35/tap
-            <span className="tc">   # one-time — Homebrew 6 only runs trusted taps</span>
-          </div>
-          <div className="tline"><span className="tp">$</span> brew install --cask dayapp</div>
+          <div className="tline"><span className="tp">$</span> {INSTALL_CMD}</div>
         </div>
+        <p className="install-note">
+          No security dialogs — this download is never quarantined. The command fetches the latest
+          release from GitHub and installs it to /Applications; your data lives in ~/Library and is
+          never touched.
+        </p>
 
         <div className="tlabel">Or build from source</div>
         <div className="terminal">
@@ -395,18 +402,10 @@ export default function App() {
           </div>
         </div>
         <div className="cta-row center">
-          <a className="btn-primary" href={DMG_URL} onClick={() => track('download_dmg')}>
-            Download .dmg ↧
-          </a>
           <a className="btn-ghost" href={GITHUB}>
             github.com/faraz-35/dayapp ↗
           </a>
         </div>
-        <p className="install-note">
-          Installing from the .dmg above: the first open may warn that the app “can’t be verified” —
-          it isn’t signed with a paid Apple developer certificate. Allow it in System Settings →
-          Privacy &amp; Security → Open Anyway. Homebrew installs skip this.
-        </p>
       </Section>
 
       {/* ---------- footer ---------- */}
