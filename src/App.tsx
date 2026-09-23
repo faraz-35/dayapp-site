@@ -7,6 +7,23 @@ const GITHUB = 'https://github.com/faraz-35/dayapp'
 const INSTALL_CMD = 'curl -fsSL https://getdayapp.vercel.app/install.sh | sh'
 const SITE_TITLE = 'DayApp — a to-do list and notes app that journals itself'
 
+function CopyIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M10 3H4.5A1.5 1.5 0 0 0 3 4.5V10" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path d="m3.2 8.6 3.2 3.2 6.4-7.6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 const FEATURES: { label: string; title: string; body: ReactNode }[] = [
   {
     label: 'tasks',
@@ -245,12 +262,20 @@ function TermsPage() {
 export default function App() {
   const [mediaTab, setMediaTab] = useState<MediaTab>('notes')
   const [copied, setCopied] = useState(false)
+  const [copiedTerm, setCopiedTerm] = useState(false)
   const route = useRoute()
 
   const copyInstall = () => {
     navigator.clipboard?.writeText(INSTALL_CMD).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1600)
+    }).catch(() => {})
+  }
+
+  const copyInstallTerm = () => {
+    navigator.clipboard?.writeText(INSTALL_CMD).then(() => {
+      setCopiedTerm(true)
+      setTimeout(() => setCopiedTerm(false), 1600)
     }).catch(() => {})
   }
 
@@ -384,14 +409,17 @@ export default function App() {
       {/* ---------- open source ---------- */}
       <Section title="One person's daily tool, yours to fork">
         <div className="tlabel">Install with one line</div>
-        <div className="terminal">
+        <div className="terminal terminal-copy">
           <div className="tline"><span className="tp">$</span> {INSTALL_CMD}</div>
+          <button
+            className={copiedTerm ? 'copy-btn copied' : 'copy-btn'}
+            onClick={copyInstallTerm}
+            title="Copy command"
+            aria-label="Copy install command"
+          >
+            {copiedTerm ? <CheckIcon /> : <CopyIcon />}
+          </button>
         </div>
-        <p className="install-note">
-          No security dialogs — this download is never quarantined. The command fetches the latest
-          release from GitHub and installs it to /Applications; your data lives in ~/Library and is
-          never touched.
-        </p>
 
         <div className="tlabel">Or build from source</div>
         <div className="terminal">

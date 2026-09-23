@@ -733,12 +733,6 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   margin: 28px 0 10px;
 }
 
-.install-note {
-  color: var(--text-faint);
-  font-size: 12.5px;
-  line-height: 1.65;
-  max-width: 640px;
-  margin: 14px 0 0;
 }
 
 .tline { white-space: nowrap; }
@@ -746,6 +740,24 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 .tp { color: var(--accent); margin-right: 9px; }
 
 .tc { color: var(--text-faint); }
+
+/* Copy button on the install terminal — GitHub's corner-copy pattern. */
+.terminal-copy { position: relative; }
+.copy-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--text-faint);
+  transition: background 0.08s ease, color 0.08s ease;
+}
+.copy-btn:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); }
+.copy-btn.copied { color: var(--accent); }
 
 .terminal a { color: var(--text); }
 
