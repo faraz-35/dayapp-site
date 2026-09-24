@@ -263,7 +263,10 @@ function PrivacyPage() {
           The site is static files on Vercel. It counts anonymous page visits with Vercel Analytics:
           no cookies, no ads, no cross-site tracking.
         </li>
-        <li>Downloads are served from GitHub Releases.</li>
+        <li>
+          The one-line install is a static script on this site. It downloads the app from GitHub
+          Releases; nothing is collected on the way.
+        </li>
       </ul>
 
       <h3>Contact</h3>
@@ -300,9 +303,11 @@ function TermsPage() {
 
       <h3>Requirements</h3>
       <p>
-        Apple Silicon Macs. The app is not signed with a paid Apple certificate, so the first
-        launch may ask you to allow it in System Settings → Privacy &amp; Security. The source is
-        public — check it before you trust it; that is what open source is for.
+        Apple Silicon Macs. The app is not signed with a paid Apple certificate. The one-line
+        install downloads it in a way that skips the security dialog. If you download the .dmg from
+        GitHub Releases instead, the first launch may ask you to allow it in System Settings →
+        Privacy &amp; Security. The source is public — check it before you trust it; that is what
+        open source is for.
       </p>
 
       <h3>Mobile sync</h3>
