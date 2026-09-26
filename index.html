@@ -11,7 +11,9 @@
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#0e0f11" />
     <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="canonical" href="https://getdayapp.vercel.app/" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="DayApp" />
     <meta property="og:url" content="https://getdayapp.vercel.app/" />
     <meta property="og:title" content="DayApp — a to-do list and notes app that journals itself" />
     <meta
@@ -26,6 +28,23 @@
       content="Tasks and notes in one native macOS window, over one timestamped log. No cron, no cloud, no accounts."
     />
     <meta name="twitter:image" content="https://getdayapp.vercel.app/assets/og.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "DayApp",
+        "url": "https://getdayapp.vercel.app/",
+        "operatingSystem": "macOS",
+        "applicationCategory": "ProductivityApplication",
+        "description": "A native macOS to-do list and notes app in one window: Today, Daily, Backlog, notes, goals, timers and analytics — all over one timestamped log. No cron, no cloud, no accounts.",
+        "screenshot": "https://getdayapp.vercel.app/assets/demo-list.png",
+        "downloadUrl": "https://getdayapp.vercel.app/install.sh",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "author": { "@type": "Person", "name": "Faraz Shah", "url": "https://faraz-35.vercel.app" },
+        "codeRepository": "https://github.com/faraz-35/dayapp",
+        "license": "https://github.com/faraz-35/dayapp/blob/main/LICENSE"
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
