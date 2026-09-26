@@ -1,7 +1,20 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Analytics } from '@vercel/analytics/react'
-import MiniDayApp from './MiniDayApp'
+
+// The demo ships as its own chunk — the landing page never parses or
+// executes it on the critical path; the skeleton holds the window's height
+// for the few ms until the chunk lands.
+const MiniDayApp = lazy(() => import('./demo/DemoApp'))
+
+function DemoSkeleton() {
+  return (
+    <div className="app-window demo-skeleton">
+      <div className="win-header"><span className="win-title">Live @ Demo</span></div>
+      <div className="win-body" />
+    </div>
+  )
+}
 
 const GITHUB = 'https://github.com/faraz-35/dayapp'
 const INSTALL_CMD = 'curl -fsSL https://getdayapp.vercel.app/install.sh | sh'
@@ -375,7 +388,13 @@ export default function App() {
       <section className="demo-section">
         <div className="wrap">
           <h2>Working demo</h2>
-          <MiniDayApp />
+          <p className="section-sub">
+            The real app, running in your browser. Create tasks and notes, time them, tag them,
+            check the analytics — and hover the window to use the keyboard.
+          </p>
+          <Suspense fallback={<DemoSkeleton />}>
+            <MiniDayApp />
+          </Suspense>
         </div>
       </section>
 
