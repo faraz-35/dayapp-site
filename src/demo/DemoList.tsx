@@ -826,15 +826,21 @@ function ProjectMenu({ projects, current, onPick, onCreate, onClose }: {
 /* ---- the hide-duration popover ---------------------------------------------- */
 
 // A row near the viewport's bottom flips its popover upward — opening a menu
-// must never hide it below the screen edge.
+// must never hide it below the screen edge. The measurement reads the menu's
+// POSITION-INDEPENDENT height against its anchor row: measuring the menu's
+// own rendered box would feed back on itself (flipping moves the box, the
+// new box measures the other way, the state oscillates — React error #185).
 function useFlip(): [React.RefObject<HTMLDivElement | null>, boolean] {
   const ref = useRef<HTMLDivElement>(null)
   const [flip, setFlip] = useState(false)
   useLayoutEffect(() => {
     const m = ref.current
     if (!m) return
-    setFlip(m.getBoundingClientRect().bottom + 8 > window.innerHeight)
-  })
+    const anchor = m.offsetParent // the row owns the popover (position: relative)
+    const anchorBottom = anchor ? anchor.getBoundingClientRect().bottom : m.getBoundingClientRect().bottom
+    setFlip(anchorBottom + m.offsetHeight + 8 > window.innerHeight)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   return [ref, flip]
 }
 
