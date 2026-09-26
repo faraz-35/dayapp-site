@@ -113,6 +113,11 @@ h2 {
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* a flex item shrinks only to its content's min-width by default — the
+     nowrap install command (~455px) would carry the whole hero past phone
+     widths, stretching the headline edge to edge on one line */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .wordmark {
@@ -1588,7 +1593,11 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
    inside the scrolling terminal) so it stays pinned while long commands
    scroll under it, and speaks the app's icon language: bare glyph at rest,
    faint tint on hover, accent check after copying. */
-.codewrap { position: relative; }
+.codewrap {
+  position: relative;
+  min-width: 0;   /* every flex level between the hero and the nowrap command must be allowed to shrink */
+  max-width: 100%;
+}
 .terminal.snug {
   padding: 12px 48px 12px 16px;
   font-size: 12.5px;
@@ -1664,6 +1673,8 @@ section[id] { scroll-margin-top: 72px; }
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  min-width: 0;   /* same shrink rule as .hero-inner — the nowrap command must never size the column */
+  max-width: 100%;
 }
 .hero-install .terminal {
   width: fit-content;
