@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  fmtAt, fmtClock, makeSeed, openSession, parseEntryCapture, parseTags,
+  fmtClock, makeSeed, openSession, parseEntryCapture, parseTags,
   parseTaskCapture, splitNoteFooter, tierRank, todayISO, totalSecs as sumSecs,
   type ActionRow, type ActionVerb, type EntryRow, type Item, type Note,
   type Priority, type Project, type Seed,
@@ -37,7 +37,6 @@ export default function DemoApp() {
   const nextId = () => ++idRef.current
 
   const [view, setView] = useState<View>('list')
-  const [showLog, setShowLog] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
 
@@ -484,8 +483,6 @@ export default function DemoApp() {
     { label: 'Reset the Demo', hint: 'fresh seed, fresh times', run: reset },
   ]
 
-  const logRows = useMemo(() => actions.slice(-14).reverse(), [actions])
-
   return (
     <div
       ref={rootRef}
@@ -528,8 +525,6 @@ export default function DemoApp() {
                   <button className="timer-chip-discard" title="Discard the session" onClick={discardTimer}>×</button>
                 </span>
               )}
-              <button className={'win-ico' + (showLog ? ' on' : '')} title={showLog ? 'Hide the action log' : 'Show the action log'}
-                onClick={() => setShowLog((v) => !v)}>≡</button>
               <button className="win-ico" title="Reset the demo" onClick={reset}>↺</button>
               {canFull && (
                 <button className={'win-ico' + (isFull ? ' on' : '')} title={isFull ? 'Exit fullscreen' : 'Fullscreen'}
@@ -570,19 +565,6 @@ export default function DemoApp() {
             )}
           </div>
         </div>
-
-        {showLog && (
-          <aside className="log-panel">
-            <div className="log-head">actions</div>
-            {logRows.map((a) => (
-              <div key={a.id} className={'log-row ' + tone(a.verb)}>
-                <span className="log-verb">{a.verb}</span>
-                <span className="log-text">{a.text}</span>
-                <span className="log-at">{a.day === todayISO() ? fmtAt(a.ts) : a.day.slice(5)}</span>
-              </div>
-            ))}
-          </aside>
-        )}
       </div>
 
       {!isFull && (
@@ -608,13 +590,6 @@ export default function DemoApp() {
       )}
     </div>
   )
-}
-
-function tone(verb: ActionVerb): string {
-  if (verb === 'completed') return 'done'
-  if (verb === 'deleted' || verb === 'fell to backlog') return 'delete'
-  if (verb === 'uncompleted' || verb === 'unpaused') return 'undo'
-  return 'create'
 }
 
 function groupNotes(notes: Note[]): Note[][] {

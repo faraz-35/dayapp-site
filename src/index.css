@@ -312,12 +312,6 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   min-height: 0;
   overflow-y: auto;
 }
-.demo-root.full .log-panel {
-  width: 340px;
-  flex: none;
-  max-height: 100%;
-  overflow-y: auto;
-}
 
 .demo-hint {
   margin: 14px auto 0;
@@ -1251,56 +1245,6 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   font-style: italic;
 }
 
-/* ---- the action log (≡) — the product's thesis made visible ------------------ */
-
-.log-panel {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 18px 10px;
-  width: 340px;
-  animation: demo-rise 0.22s ease both;
-}
-.log-head {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-}
-.log-row {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 7px 2px;
-  border-bottom: 1px solid rgba(35, 38, 45, 0.55);
-  font-size: 12.5px;
-}
-.log-row:last-child { border-bottom: none; }
-.log-verb {
-  flex: none;
-  font-size: 11px;
-  letter-spacing: 0.03em;
-  color: var(--text-dim);
-}
-.log-row.done .log-verb { color: var(--accent); }
-.log-row.delete .log-verb { color: var(--danger); }
-.log-row.undo .log-verb { color: var(--text-faint); }
-.log-row.create .log-verb { color: var(--text-dim); }
-.log-text {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text);
-}
-.log-at { flex: none; color: var(--text-faint); font-size: 11px; }
-
-@keyframes demo-rise {
-  from { opacity: 0; transform: translateY(-4px); }
 }
 
 /* ---- videos: one surface, format pills choose what's on it ----------- */
@@ -1623,7 +1567,6 @@ section[id] { scroll-margin-top: 72px; }
 
 @media (max-width: 900px) {
   .demo-grid-inner { flex-direction: column; align-items: center; }
-  .log-panel { width: min(620px, 100%); }
   .shots { grid-template-columns: 1fr; }
   .kb-row { grid-template-columns: 1fr; gap: 8px; }
 }
