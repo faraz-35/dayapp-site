@@ -61,9 +61,7 @@ function CaptureBar({ kind, onAdd }: {
     <form className="capture" onSubmit={(e) => { e.preventDefault(); submit() }}>
       <input
         value={val}
-        placeholder={kind === 'journal'
-          ? 'Write a journal line — ##q sends a quote instead'
-          : 'Add a quote — ##j sends a journal line instead'}
+        placeholder={kind === 'journal' ? 'Write a journal line' : 'Add a quote'}
         onChange={(e) => setVal(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
       />

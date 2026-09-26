@@ -62,7 +62,6 @@ export default function DemoApp() {
   const bodyRef = useRef<HTMLDivElement>(null)
   const taskCapRef = useRef<CaptureHandle | null>(null)
   const noteCapRef = useRef<CaptureHandle | null>(null)
-  const canFull = useState(() => typeof document !== 'undefined' && document.fullscreenEnabled === true)[0]
 
   const activeSession = openSession(sessions)
 
@@ -111,28 +110,21 @@ export default function DemoApp() {
       ? { ...n, hidden: false, hiddenUntil: null } : n)))
   }, [])
 
-  /* ---- fullscreen + engagement ---- */
-  useEffect(() => {
-    const onFs = () => setIsFull(!!document.fullscreenElement)
-    document.addEventListener('fullscreenchange', onFs)
-    return () => document.removeEventListener('fullscreenchange', onFs)
-  }, [])
+  /* ---- fullscreen (an overlay, not the Fullscreen API) + engagement ---- */
+  /* The browser owns Esc in real fullscreen — it would exit and the demo
+     would never see the key. The demo's fullscreen is a fixed overlay
+     instead: Esc stays a DayApp key, and leaving is the ⤢ button or the
+     palette. */
+  useEffect(() => () => { document.body.style.overflow = '' }, [])
 
   useEffect(() => {
     setEngaged(pointerIn.current || focusIn.current || isFull)
   }, [isFull])
 
   const toggleFull = () => {
-    // the class flips optimistically — the fullscreenchange listener below
-    // reconciles the Esc-key exit
-    if (document.fullscreenElement) {
-      document.exitFullscreen()
-      setIsFull(false)
-    } else {
-      rootRef.current?.requestFullscreen()
-        .then(() => setIsFull(true))
-        .catch((err) => console.warn('fullscreen failed', err))
-    }
+    const next = !isFull
+    setIsFull(next)
+    document.body.style.overflow = next ? 'hidden' : ''
   }
 
   /* ---- mutations — every item write appends to `actions` ---- */
@@ -488,7 +480,7 @@ export default function DemoApp() {
     { label: hiddenPriorities.includes(1) ? 'Show Priority 1 Tasks' : 'Hide Priority 1 Tasks', hint: '', run: () => togglePrio(1) },
     { label: hiddenPriorities.includes(2) ? 'Show Priority 2 Tasks' : 'Hide Priority 2 Tasks', hint: '', run: () => togglePrio(2) },
     { label: hiddenPriorities.includes(3) ? 'Show Priority 3 Tasks' : 'Hide Priority 3 Tasks', hint: '', run: () => togglePrio(3) },
-    ...(canFull ? [{ label: isFull ? 'Exit Fullscreen' : 'Go Fullscreen', hint: 'Esc leaves', run: toggleFull }] : []),
+    { label: isFull ? 'Exit Fullscreen' : 'Go Fullscreen', hint: 'Esc stays a DayApp key', run: toggleFull },
     { label: 'Reset the Demo', hint: 'fresh seed, fresh times', run: reset },
   ]
 
@@ -535,15 +527,13 @@ export default function DemoApp() {
                 </span>
               )}
               <button className="win-ico" title="Reset the demo" onClick={reset}>↺</button>
-              {canFull && (
-                <button className={'win-ico' + (isFull ? ' on' : '')} title={isFull ? 'Exit fullscreen' : 'Fullscreen'}
-                  onClick={toggleFull}>
-                  <svg className="action-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-                    <path d="M7.5 1.5h3v3M4.5 10.5h-3v-3M10.5 1.5 7.2 4.8M1.5 10.5l3.3-3.3"
-                      fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                  </svg>
-                </button>
-              )}
+              <button className={'win-ico' + (isFull ? ' on' : '')} title={isFull ? 'Exit fullscreen' : 'Fullscreen'}
+                onClick={toggleFull}>
+                <svg className="action-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+                  <path d="M7.5 1.5h3v3M4.5 10.5h-3v-3M10.5 1.5 7.2 4.8M1.5 10.5l3.3-3.3"
+                    fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+              </button>
             </div>
           </div>
           <div className="win-body" ref={bodyRef}>

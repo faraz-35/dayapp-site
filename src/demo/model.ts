@@ -154,6 +154,27 @@ export function fmtAt(ts: number): string {
 
 /* ---- the token grammar ----------------------------------------------------- */
 
+// Which surface a token line is on — the matcher colors exactly what that
+// surface parses: the task capture routes ##t/##d/##b (##j/##q are prose
+// there), the notes capture routes ##j/##q (no @ — notes have no delegation
+// axis), edits parse only the trailing !N/#tag/@ tokens.
+export type TokenSurface = 'task-capture' | 'task-edit' | 'note-capture'
+
+const TOKEN_RES: Record<TokenSurface, RegExp> = {
+  'task-capture': /##[tbd](?=\s|$)|![0-3](?=\s|$)|#[\w-]+|@0?(?=\s|$)/g,
+  'task-edit': /![0-3](?=\s|$)|#[\w-]+|@0?(?=\s|$)/g,
+  'note-capture': /##[jq](?=\s|$)|![0-3](?=\s|$)|#[\w-]+/g,
+}
+
+export function tokenSpans(text: string, surface: TokenSurface): Array<[number, number]> {
+  const spans: Array<[number, number]> = []
+  const re = TOKEN_RES[surface]
+  re.lastIndex = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text))) spans.push([m.index, m.index + m[0].length])
+  return spans
+}
+
 export interface Tags {
   text: string
   priority: Priority
@@ -261,16 +282,6 @@ function resolveProject(name: string, projects: Project[]): number | null {
 }
 
 // The one token matcher — colors exactly what the parsers strip.
-const TOKEN_RE = /##[jdqtb](?=\s|$)|![0-3](?=\s|$)|#[\w-]+|@(?=\s|$)/g
-
-export function tokenSpans(text: string): Array<[number, number]> {
-  const spans: Array<[number, number]> = []
-  TOKEN_RE.lastIndex = 0
-  let m: RegExpExecArray | null
-  while ((m = TOKEN_RE.exec(text))) spans.push([m.index, m.index + m[0].length])
-  return spans
-}
-
 /* ---- derived facts --------------------------------------------------------- */
 
 export function projectColor(id: number): string {

@@ -4,11 +4,12 @@
    one deliberate stub (they need real days). Class names and metrics follow
    the app's own stylesheet. */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
-  fmtClock, fmtDuration, fmtReminder, projectColor, clipProject, tierRank,
+  dayISO, fmtClock, fmtDuration, fmtReminder, projectColor, clipProject, tierRank,
   todayISO, tokenSpans,
-  type HideDuration, type Item, type Note, type Project, type Section, type SessionRow,
+  type HideDuration, type Item, type Note, type Project, type Section,
+  type SessionRow, type TokenSurface,
 } from './model'
 
 export type Pop = { kind: 'project' | 'remind' | 'hide'; on: 'task' | 'note'; id: number } | null
@@ -67,6 +68,7 @@ export default function DemoList(p: DemoListProps) {
       <div className="surface-head">Notes</div>
       <CaptureField
         textarea
+        surface="note-capture"
         handleRef={p.noteCapRef}
         placeholder="Add a note — Enter saves · !1 #tag tag it · ##j / ##q write a journal line or quote"
         onSubmit={p.act.addNote}
@@ -84,6 +86,7 @@ export default function DemoList(p: DemoListProps) {
       {/* ---- tasks: ONE capture above the stack, ##t / ##d / ##b route ---- */}
       <div className="surface-head tasks-head">Tasks</div>
       <CaptureField
+        surface="task-capture"
         handleRef={p.taskCapRef}
         placeholder="Add a task — plain lands in Today · ##d / ##b route · !1 #tag @ mark"
         onSubmit={p.act.addTask}
@@ -110,91 +113,244 @@ export default function DemoList(p: DemoListProps) {
   )
 }
 
-/* ---- capture fields with live token coloring ------------------------------ */
-/* The field's text renders transparent; a mirror underneath paints the same
-   text with the tokens accented — color only, never substitution, so the
-   mirror is width-identical to the raw text and the native caret and
-   selection stay exact. */
+/* ---- token fields: substituted mirror + painted caret ---------------------- */
+/* The app's TokenField model, ported: the field's real text renders trans-
+   parent and a mirror paints the SUBSTITUTED line — ##j becomes "journal",
+   !2 becomes the bars glyph, @ becomes "agent" — so a token shows what it
+   does. The native caret and selection track the RAW value and would drift
+   off the wider display words, so both are hidden and redrawn over the
+   mirror's own layout (Range rects over the segment spans). The demo has no
+   CSS zoom, so the app's zoom-division work doesn't apply here. */
 
-function TokenText({ text }: { text: string }) {
-  if (!text) return null
-  const spans = tokenSpans(text)
-  const out: ReactNode[] = []
-  let pos = 0
-  spans.forEach(([a, b], i) => {
-    if (a > pos) out.push(<span key={`p${i}`}>{text.slice(pos, a)}</span>)
-    out.push(<span key={`t${i}`} className="tok">{text.slice(a, b)}</span>)
-    pos = b
-  })
-  if (pos < text.length) out.push(<span key="end">{text.slice(pos)}</span>)
-  return <>{out}</>
+const TOKEN_WORDS: Record<string, string> = {
+  '##t': 'today', '##d': 'daily', '##b': 'backlog', '##j': 'journal', '##q': 'quote',
+  '@': 'agent', '@0': 'agent',
 }
 
-function CaptureField({ handleRef, onSubmit, placeholder, textarea }: {
+interface MirrorSeg { raw: string; word?: string; bars?: number; tok?: boolean }
+
+function buildMirror(text: string, surface: TokenSurface): MirrorSeg[] {
+  const segs: MirrorSeg[] = []
+  let pos = 0
+  for (const [a, b] of tokenSpans(text, surface)) {
+    if (a > pos) segs.push({ raw: text.slice(pos, a) })
+    const raw = text.slice(a, b)
+    if (raw.startsWith('!')) segs.push({ raw, bars: raw === '!0' ? 0 : 4 - Number(raw[1]) })
+    else if (TOKEN_WORDS[raw]) segs.push({ raw, word: TOKEN_WORDS[raw] })
+    else segs.push({ raw, tok: true }) // #tag — processed, but nothing to convert
+    pos = b
+  }
+  if (pos < text.length) segs.push({ raw: text.slice(pos) })
+  return segs
+}
+
+// A raw caret index lands at a display position: inside a converting token
+// the caret rides the end of its display word; a bars segment has no text,
+// so it is crossed at its edge (after = end of the segment).
+function displayPos(segs: MirrorSeg[], rawIdx: number): { seg: number; off: number; after?: boolean } {
+  let raw = 0
+  for (let i = 0; i < segs.length; i++) {
+    const s = segs[i]
+    if (rawIdx <= raw + s.raw.length) {
+      const off = rawIdx - raw
+      if (s.bars != null) return { seg: i, off, after: off >= s.raw.length }
+      if (s.word != null) return { seg: i, off: off === 0 ? 0 : s.word.length }
+      return { seg: i, off }
+    }
+    raw += s.raw.length
+  }
+  const last = segs[segs.length - 1]
+  if (!last) return { seg: 0, off: 0 }
+  return { seg: segs.length - 1, off: last.word?.length ?? 0, after: last.bars != null }
+}
+
+function setBoundary(range: Range, mirror: HTMLElement, pos: { seg: number; off: number; after?: boolean }, at: 'start' | 'end') {
+  const set = (container: Node, off: number) => { if (at === 'start') range.setStart(container, off); else range.setEnd(container, off) }
+  const child = mirror.children[pos.seg] as HTMLElement | undefined
+  if (!child) { set(mirror, mirror.children.length); return }
+  if (child.classList.contains('tok-bars')) {
+    set(mirror, Array.prototype.indexOf.call(mirror.children, child) + (pos.after ? 1 : 0))
+    return
+  }
+  const node = child.firstChild
+  if (!node) { set(mirror, Array.prototype.indexOf.call(mirror.children, child)); return }
+  set(node, Math.min(pos.off, node.textContent?.length ?? 0))
+}
+
+function useTokenPaint(
+  surface: TokenSurface,
+  fieldRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>,
+  mirrorRef: React.RefObject<HTMLDivElement | null>,
+  layerRef: React.RefObject<HTMLDivElement | null>,
+) {
+  const paintRef = useRef<() => void>(() => {})
+
+  useEffect(() => {
+    const field = fieldRef.current
+    const mirror = mirrorRef.current
+    const layer = layerRef.current
+    if (!field || !mirror || !layer) return
+
+    const paint = () => {
+      const text = field.value
+      const segs = buildMirror(text, surface)
+      // rebuild the mirror from the live value — the source of truth is the DOM
+      mirror.textContent = ''
+      segs.forEach((s, i) => {
+        const el = document.createElement('span')
+        el.dataset.seg = String(i)
+        if (s.bars != null) {
+          el.className = 'tok priority-bars tok-bars'
+          for (let b = 1; b <= 3; b++) {
+            const bar = document.createElement('span')
+            bar.className = 'bar' + (b <= s.bars ? ' filled' : '')
+            el.appendChild(bar)
+          }
+        } else if (s.word != null || s.tok) {
+          el.className = 'tok'
+          el.textContent = s.word ?? s.raw
+        } else el.textContent = s.raw
+        mirror.appendChild(el)
+      })
+
+      layer.textContent = ''
+      if (document.activeElement !== field) return
+      const base = mirror.getBoundingClientRect()
+      const lineH = parseFloat(getComputedStyle(field).lineHeight) || 18
+      const caretAt = (pos: { seg: number; off: number; after?: boolean }) => {
+        const range = document.createRange()
+        setBoundary(range, mirror, pos, 'start')
+        range.collapse(true)
+        return range.getClientRects()[0] ?? range.getBoundingClientRect()
+      }
+
+      const s = field.selectionStart ?? 0
+      const e = field.selectionEnd ?? 0
+      if (text === '') {
+        // empty field: the caret sits at the origin
+        const c = document.createElement('div')
+        c.className = 'tok-caret'
+        c.style.left = '0px'
+        c.style.top = '0px'
+        c.style.height = lineH + 'px'
+        layer.appendChild(c)
+        return
+      }
+      if (s === e) {
+        const rect = caretAt(displayPos(segs, s))
+        const c = document.createElement('div')
+        c.className = 'tok-caret'
+        const left = rect.left - base.left
+        const top = rect.top - base.top
+        c.style.left = left + 'px'
+        c.style.top = top + 'px'
+        c.style.height = (rect.height || lineH) + 'px'
+        layer.appendChild(c)
+        // the single-line mirror tracks the caret for horizontal scroll —
+        // the substituted width differs from the raw text, so the input's
+        // own scrollLeft can't be copied
+        if (mirror.scrollWidth > mirror.clientWidth) {
+          if (left > mirror.clientWidth - 14) mirror.scrollLeft += left - mirror.clientWidth + 14
+          else if (left < 0) mirror.scrollLeft = Math.max(0, mirror.scrollLeft + left - 14)
+        }
+      } else {
+        const range = document.createRange()
+        setBoundary(range, mirror, displayPos(segs, Math.min(s, e)), 'start')
+        setBoundary(range, mirror, displayPos(segs, Math.max(s, e)), 'end')
+        for (const rect of range.getClientRects()) {
+          if (rect.width < 1) continue
+          const d = document.createElement('div')
+          d.className = 'tok-sel-rect'
+          d.style.left = rect.left - base.left + 'px'
+          d.style.top = rect.top - base.top + 'px'
+          d.style.width = rect.width + 'px'
+          d.style.height = rect.height + 'px'
+          layer.appendChild(d)
+        }
+      }
+    }
+
+    paintRef.current = paint
+    // Paint runs synchronously — it is pure DOM (no React state in the
+    // dispatch, the trap the app's rAF deferral works around) and reading the
+    // field's value/selection at event time is exactly the point.
+    field.addEventListener('input', paint)
+    field.addEventListener('focus', paint)
+    field.addEventListener('keyup', paint)
+    const onSel = () => { if (document.activeElement === field) paint() }
+    document.addEventListener('selectionchange', onSel)
+    paint()
+    return () => {
+      field.removeEventListener('input', paint)
+      field.removeEventListener('focus', paint)
+      field.removeEventListener('keyup', paint)
+      document.removeEventListener('selectionchange', onSel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [surface, fieldRef, mirrorRef, layerRef])
+
+  return paintRef
+}
+
+// Both capture fields and the row editor render through this: uncontrolled
+// field (the DOM holds the value), transparent text, mirror + caret layer
+// painted by the hook.
+function CaptureField({ handleRef, onSubmit, placeholder, textarea, surface }: {
   handleRef: React.RefObject<CaptureHandle | null>
   onSubmit(raw: string): void
   placeholder: string
   textarea?: boolean
+  surface: TokenSurface
 }) {
-  const [val, setVal] = useState('')
   const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null)
+  const mirrorRef = useRef<HTMLDivElement>(null)
+  const layerRef = useRef<HTMLDivElement>(null)
+  const paint = useTokenPaint(surface, inputRef, mirrorRef, layerRef)
 
   useEffect(() => {
     handleRef.current = {
       preset(v: string) {
-        setVal(v)
-        requestAnimationFrame(() => {
-          const el = inputRef.current
-          if (!el) return
-          el.focus()
-          el.setSelectionRange(el.value.length, el.value.length)
-        })
+        const el = inputRef.current
+        if (!el) return
+        el.value = v
+        el.focus()
+        el.setSelectionRange(el.value.length, el.value.length)
+        paint.current()
       },
       focus: () => inputRef.current?.focus(),
     }
     return () => { handleRef.current = null }
-  }, [handleRef])
+  }, [handleRef, paint])
 
   const submit = () => {
-    if (!val.trim()) return
-    onSubmit(val)
-    setVal('')
-  }
-
-  const onKey = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !(textarea && e.shiftKey)) {
-      e.preventDefault()
-      submit()
-    }
+    const el = inputRef.current
+    if (!el) return
+    if (!el.value.trim()) return
+    onSubmit(el.value)
+    el.value = ''
+    paint.current()
   }
 
   return (
-    <form
-      className="capture"
-      onSubmit={(e) => { e.preventDefault(); submit() }}
-    >
+    <form className="capture" onSubmit={(e) => { e.preventDefault(); submit() }}>
       <div className="tok-field">
         {textarea ? (
           <textarea
             ref={inputRef as React.RefObject<HTMLTextAreaElement>}
             rows={1}
-            value={val}
             placeholder={placeholder}
-            onChange={(e) => { setVal(e.target.value); autosize(e.target) }}
-            onKeyDown={onKey}
+            onInput={(e) => autosize(e.currentTarget)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}
           />
         ) : (
           <input
             ref={inputRef as React.RefObject<HTMLInputElement>}
-            value={val}
             placeholder={placeholder}
-            onChange={(e) => setVal(e.target.value)}
-            onKeyDown={onKey}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
           />
         )}
-        <div className="tok-mirror" data-multi={textarea ? '1' : undefined}>
-          <TokenText text={val} />
-        </div>
+        <div className="tok-mirror" ref={mirrorRef} data-multi={textarea ? '1' : undefined} />
+        <div className="tok-caret-layer" ref={layerRef} />
       </div>
     </form>
   )
@@ -469,7 +625,10 @@ function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, 
           </div>
         )}
         {!editing && (
-          <>
+          /* The cluster flows inline on desktop; on phones (≤640px) it floats
+             over the row's right edge on hover/focus instead of reserving
+             width — there is no room for a dead strip there. */
+          <span className="item-actions">
             {isTiming ? (
               <button className="item-action" data-kb="1" title="Stop timer" onClick={(e) => { e.stopPropagation(); act.toggleTimer(item) }}>⏸</button>
             ) : item.hidden ? null : item.section === 'backlog' ? (
@@ -499,7 +658,7 @@ function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, 
                 <button className="item-action danger" data-kb="6" title="Delete" onClick={(e) => { e.stopPropagation(); act.del(item) }}>×</button>
               </>
             )}
-          </>
+          </span>
         )}
         {pop && pop.on === 'task' && pop.id === item.id && pop.kind === 'project' && (
           <ProjectMenu
@@ -511,13 +670,7 @@ function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, 
           />
         )}
         {pop && pop.on === 'task' && pop.id === item.id && pop.kind === 'remind' && (
-          <div className="row-menu remind-stub">
-            <div className="row-menu-title">◷ Remind me</div>
-            <p>
-              Pick a date and the task promotes itself to Today on that morning.
-              That needs real days on your Mac — it's left out of this demo.
-            </p>
-          </div>
+          <RemindStub onPick={() => setPop(null)} />
         )}
         {pop && pop.on === 'task' && pop.id === item.id && pop.kind === 'hide' && (
           <HideMenu
@@ -535,12 +688,16 @@ function EditInput({ initial, onCommit }: {
   onCommit(raw: string): void
 }) {
   const ref = useRef<HTMLInputElement>(null)
+  const mirrorRef = useRef<HTMLDivElement>(null)
+  const layerRef = useRef<HTMLDivElement>(null)
+  const paint = useTokenPaint('task-edit', ref, mirrorRef, layerRef)
   useEffect(() => {
     const el = ref.current
     if (!el) return
     el.focus()
     el.setSelectionRange(el.value.length, el.value.length)
-  }, [])
+    paint.current()
+  }, [paint])
   return (
     <div className="tok-field item-edit">
       <input
@@ -553,30 +710,8 @@ function EditInput({ initial, onCommit }: {
           if (e.key === 'Escape') { e.currentTarget.value = initial; onCommit(initial) }
         }}
       />
-      <EditMirror initial={initial} inputRef={ref} />
-    </div>
-  )
-}
-
-// The edit field's mirror re-parses as you type so the tokens its commit will
-// strip are the ones it colors. The input is uncontrolled; the mirror reads
-// its live value through the ref, repainting on each keystroke's own event.
-function EditMirror({ initial, inputRef }: {
-  initial: string
-  inputRef: React.RefObject<HTMLInputElement | null>
-}) {
-  const [, force] = useState(0)
-  useEffect(() => {
-    const el = inputRef.current
-    if (!el) return
-    const on = () => force((n) => n + 1)
-    el.addEventListener('input', on)
-    return () => el.removeEventListener('input', on)
-  }, [inputRef])
-  const text = inputRef.current?.value ?? initial
-  return (
-    <div className="tok-mirror">
-      <TokenText text={text} />
+      <div className="tok-mirror" ref={mirrorRef} />
+      <div className="tok-caret-layer" ref={layerRef} />
     </div>
   )
 }
@@ -647,8 +782,9 @@ function ProjectMenu({ projects, current, onPick, onCreate, onClose }: {
     else onPick(it.id)
   }
 
+  const [menuRef, flip] = useFlip()
   return (
-    <div className="row-menu" onClick={(e) => e.stopPropagation()}>
+    <div className={'row-menu' + (flip ? ' flip' : '')} ref={menuRef} onClick={(e) => e.stopPropagation()}>
       <input
         ref={inputRef}
         className="row-menu-input"
@@ -689,6 +825,19 @@ function ProjectMenu({ projects, current, onPick, onCreate, onClose }: {
 
 /* ---- the hide-duration popover ---------------------------------------------- */
 
+// A row near the viewport's bottom flips its popover upward — opening a menu
+// must never hide it below the screen edge.
+function useFlip(): [React.RefObject<HTMLDivElement | null>, boolean] {
+  const ref = useRef<HTMLDivElement>(null)
+  const [flip, setFlip] = useState(false)
+  useLayoutEffect(() => {
+    const m = ref.current
+    if (!m) return
+    setFlip(m.getBoundingClientRect().bottom + 8 > window.innerHeight)
+  })
+  return [ref, flip]
+}
+
 const HIDE_OPTIONS: { id: HideDuration; label: string; sub: string }[] = [
   { id: 'forever', label: 'Forever', sub: 'until unhidden' },
   { id: 'day', label: 'For a day', sub: 'until tomorrow' },
@@ -700,8 +849,9 @@ function HideMenu({ verb, onPick }: {
   verb: 'Hide' | 'Pause'
   onPick(d: HideDuration): void
 }) {
+  const [ref, flip] = useFlip()
   return (
-    <div className="row-menu hide-menu" onClick={(e) => e.stopPropagation()}>
+    <div className={'row-menu hide-menu' + (flip ? ' flip' : '')} ref={ref} onClick={(e) => e.stopPropagation()}>
       {HIDE_OPTIONS.map((o) => (
         <button
           key={o.id}
@@ -712,6 +862,38 @@ function HideMenu({ verb, onPick }: {
           <span className="hide-menu-sub">{o.id === 'forever' && verb === 'Pause' ? 'until unpaused' : o.sub}</span>
         </button>
       ))}
+    </div>
+  )
+}
+
+/* ---- the reminder popover (the one stub) -------------------------------------- */
+/* The app's menu, faithfully: presets carrying their computed dates and a
+   native date picker. The promotion itself needs the app open across real
+   days, so a pick only closes the menu — the line at the bottom says so. */
+
+const REMIND_PRESETS = [
+  { days: 1, label: 'Tomorrow' },
+  { days: 3, label: 'In 3 days' },
+  { days: 7, label: 'In a week' },
+]
+
+function RemindStub({ onPick }: { onPick(): void }) {
+  const [ref, flip] = useFlip()
+  return (
+    <div className={'row-menu' + (flip ? ' flip' : '')} ref={ref} onClick={(e) => e.stopPropagation()}>
+      {REMIND_PRESETS.map((p) => (
+        <button key={p.days} className="hide-menu-item" onMouseDown={(e) => { e.preventDefault(); onPick() }}>
+          <span className="hide-menu-label">{p.label}</span>
+          <span className="hide-menu-sub">{dayISO(-p.days)}</span>
+        </button>
+      ))}
+      <div className="row-menu-divider" />
+      <input type="date" className="menu-input" defaultValue={dayISO(-1)} title="Pick a date" />
+      <div className="row-menu-divider" />
+      <p className="remind-note">
+        A reminder promotes the task on the morning it names. That needs real days
+        on your Mac — it's a stub in this demo.
+      </p>
     </div>
   )
 }
