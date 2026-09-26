@@ -51,6 +51,14 @@ export default function DemoApp() {
   const [agentFilter, setAgentFilter] = useState<null | 'agent' | 'my'>(null)
   const [projectFilter, setProjectFilter] = useState<number | null>(null)
 
+  // the layout toggles (⌘P) + Focus Mode, the app's lens: P1 notes only,
+  // Today/Daily and P1 Backlog only — it composes, never mutates
+  const [showNotes, setShowNotes] = useState(true)
+  const [showToday, setShowToday] = useState(true)
+  const [showDaily, setShowDaily] = useState(true)
+  const [showBacklog, setShowBacklog] = useState(true)
+  const [focusMode, setFocusMode] = useState(false)
+
   const [now, setNow] = useState(0)
   const [tabVisible, setTabVisible] = useState(true)
   const [isFull, setIsFull] = useState(false)
@@ -76,16 +84,17 @@ export default function DemoApp() {
   const { today, daily, backlog, allTasks } = useMemo(() => {
     const t = items.filter((i) => i.section === 'today' && pass(i))
     const d = items.filter((i) => i.section === 'daily' && pass(i))
-    const b = items.filter((i) => i.section === 'backlog' && pass(i))
+    const b = items.filter((i) => i.section === 'backlog' && pass(i) && (!focusMode || i.priority === 1))
       .sort((a, c) => tierRank(a.priority) - tierRank(c.priority) || a.id - c.id)
     return { today: t, daily: d, backlog: b, allTasks: [...t, ...d, ...b] }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, hiddenPriorities, showHiddenTasks, agentFilter, projectFilter])
+  }, [items, hiddenPriorities, showHiddenTasks, agentFilter, projectFilter, focusMode])
 
   const notesVisible = useMemo(() => notes.filter((n) =>
     (n.hidden ? showHiddenNotes : true) &&
-    (projectFilter == null || n.projectId === projectFilter),
-  ), [notes, showHiddenNotes, projectFilter])
+    (projectFilter == null || n.projectId === projectFilter) &&
+    (!focusMode || n.priority === 1),
+  ), [notes, showHiddenNotes, projectFilter, focusMode])
 
   /* ---- the live timer re-renders the demo once a second — only while a
           session is open and the tab is visible ---- */
@@ -308,6 +317,8 @@ export default function DemoApp() {
     setView('list'); setSel(null); setEditingId(null); setDetailsId(null); setPop(null)
     setHiddenPriorities([]); setShowHiddenTasks(false); setShowHiddenNotes(false)
     setAgentFilter(null); setProjectFilter(null)
+    setShowNotes(true); setShowToday(true); setShowDaily(true); setShowBacklog(true)
+    setFocusMode(false)
   }
 
   const reset = () => {
@@ -402,7 +413,12 @@ export default function DemoApp() {
     if (e.metaKey || e.ctrlKey || e.altKey) return
     if (paletteOpen || searchOpen) return // an open overlay owns the keyboard
     const t = e.target as HTMLElement | null
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) {
+      // Esc inside a demo field steps back out of it (the edit surfaces run
+      // their own cancel/save first; the capture fields just lose focus)
+      if (e.key === 'Escape' && rootRef.current?.contains(t)) t.blur()
+      return
+    }
 
     const live = engaged || !!pop
     if (!live) return
@@ -474,6 +490,11 @@ export default function DemoApp() {
     { label: 'View Journal', hint: '##j lines by day', run: () => setView('journal') },
     { label: 'View Quotes', hint: '##q lines by day', run: () => setView('quotes') },
     { label: 'Show Default View', hint: 'reset the working view', run: resetView },
+    { label: focusMode ? 'Exit Focus Mode' : 'Enter Focus Mode', hint: 'P1 notes · Today · Daily · P1 backlog', run: () => setFocusMode((v) => !v) },
+    { label: showNotes ? 'Hide Notes' : 'Show Notes', hint: '', run: () => setShowNotes((v) => !v) },
+    { label: showToday ? 'Hide Today' : 'Show Today', hint: '', run: () => setShowToday((v) => !v) },
+    { label: showDaily ? 'Hide Daily' : 'Show Daily', hint: '', run: () => setShowDaily((v) => !v) },
+    { label: showBacklog ? 'Hide Backlog' : 'Show Backlog', hint: '', run: () => setShowBacklog((v) => !v) },
     { label: showHiddenTasks ? 'Hide Hidden Tasks' : 'Show Hidden Tasks', hint: 'archived rows, inline', run: () => setShowHiddenTasks((v) => !v) },
     { label: showHiddenNotes ? 'Hide Hidden Notes' : 'Show Hidden Notes', hint: 'archived notes, inline', run: () => setShowHiddenNotes((v) => !v) },
     { label: agentFilter === 'agent' ? 'Show My Tasks' : 'Show Agent Tasks', hint: 'the 🤖 queue', run: () => setAgentFilter((v) => (v === 'agent' ? null : 'agent')) },
@@ -540,6 +561,7 @@ export default function DemoApp() {
             {view === 'list' && (
               <DemoList
                 today={today} daily={daily} backlog={backlog} notes={notesVisible}
+                showNotes={showNotes} showToday={showToday} showDaily={showDaily} showBacklog={showBacklog}
                 projects={projects} activeSession={activeSession} nowMs={now || Date.now()}
                 totalSecsOf={(id) => sumSecs(sessions, id)}
                 sel={sel} setSel={setSel} editingId={editingId} setEditingId={setEditingId}

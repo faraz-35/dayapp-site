@@ -25,6 +25,10 @@ export interface DemoListProps {
   daily: Item[]
   backlog: Item[]
   notes: Note[]
+  showNotes: boolean
+  showToday: boolean
+  showDaily: boolean
+  showBacklog: boolean
   projects: Project[]
   activeSession: SessionRow | null
   nowMs: number
@@ -65,23 +69,27 @@ export default function DemoList(p: DemoListProps) {
   return (
     <div className="d-list">
       {/* ---- notes: content, not activity — creating one writes no log ---- */}
-      <div className="surface-head">Notes</div>
-      <CaptureField
-        textarea
-        surface="note-capture"
-        handleRef={p.noteCapRef}
-        placeholder="Add a note — Enter saves · !1 #tag tag it · ##j / ##q write a journal line or quote"
-        onSubmit={p.act.addNote}
-      />
-      <NoteGroups
-        notes={p.notes}
-        projects={p.projects}
-        sel={p.sel}
-        setSel={p.setSel}
-        pop={p.pop}
-        setPop={p.setPop}
-        act={p.act}
-      />
+      {p.showNotes && (
+        <>
+          <div className="surface-head">Notes</div>
+          <CaptureField
+            textarea
+            surface="note-capture"
+            handleRef={p.noteCapRef}
+            placeholder="Add a note — Enter saves · !1 #tag tag it · ##j / ##q write a journal line or quote"
+            onSubmit={p.act.addNote}
+          />
+          <NoteGroups
+            notes={p.notes}
+            projects={p.projects}
+            sel={p.sel}
+            setSel={p.setSel}
+            pop={p.pop}
+            setPop={p.setPop}
+            act={p.act}
+          />
+        </>
+      )}
 
       {/* ---- tasks: ONE capture above the stack, ##t / ##d / ##b route ---- */}
       <div className="surface-head tasks-head">Tasks</div>
@@ -91,24 +99,24 @@ export default function DemoList(p: DemoListProps) {
         placeholder="Add a task — plain lands in Today · ##d / ##b route · !1 #tag @ mark"
         onSubmit={p.act.addTask}
       />
-      <ItemSection
+      {p.showToday && <ItemSection
         name="today" items={p.today} projects={p.projects}
         activeSession={p.activeSession} nowMs={p.nowMs} totalSecsOf={p.totalSecsOf}
         sel={p.sel} setSel={p.setSel} editingId={p.editingId} setEditingId={p.setEditingId}
         detailsId={p.detailsId} setDetailsId={p.setDetailsId} pop={p.pop} setPop={p.setPop} act={p.act}
-      />
-      <ItemSection
+      />}
+      {p.showDaily && <ItemSection
         name="daily" items={p.daily} projects={p.projects}
         activeSession={p.activeSession} nowMs={p.nowMs} totalSecsOf={p.totalSecsOf}
         sel={p.sel} setSel={p.setSel} editingId={p.editingId} setEditingId={p.setEditingId}
         detailsId={p.detailsId} setDetailsId={p.setDetailsId} pop={p.pop} setPop={p.setPop} act={p.act}
-      />
-      <ItemSection
+      />}
+      {p.showBacklog && <ItemSection
         name="backlog" items={p.backlog} projects={p.projects}
         activeSession={p.activeSession} nowMs={p.nowMs} totalSecsOf={p.totalSecsOf}
         sel={p.sel} setSel={p.setSel} editingId={p.editingId} setEditingId={p.setEditingId}
         detailsId={p.detailsId} setDetailsId={p.setDetailsId} pop={p.pop} setPop={p.setPop} act={p.act}
-      />
+      />}
     </div>
   )
 }
