@@ -7,10 +7,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  fmtClock, makeSeed, openSession, parseEntryCapture, parseTags,
+  fmtClock, hideUntil, makeSeed, openSession, parseEntryCapture, parseTags,
   parseTaskCapture, splitNoteFooter, tierRank, todayISO, totalSecs as sumSecs,
-  type ActionRow, type ActionVerb, type EntryRow, type Item, type Note,
-  type Priority, type Project, type Seed,
+  type ActionRow, type ActionVerb, type EntryRow, type HideDuration, type Item,
+  type Note, type Priority, type Project, type Seed,
 } from './model'
 import DemoList, { type CaptureHandle, type Pop, type Sel } from './DemoList'
 import DemoAnalytics from './DemoAnalytics'
@@ -102,6 +102,15 @@ export default function DemoApp() {
     return () => clearInterval(iv)
   }, [activeSession?.id, tabVisible]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ---- the 6am-boundary sweep, demo edition: expired hide durations lift ---- */
+  useEffect(() => {
+    const today = todayISO()
+    setItems((xs) => xs.map((x) => (x.hidden && x.hiddenUntil != null && x.hiddenUntil < today
+      ? { ...x, hidden: false, hiddenUntil: null } : x)))
+    setNotes((ns) => ns.map((n) => (n.hidden && n.hiddenUntil != null && n.hiddenUntil < today
+      ? { ...n, hidden: false, hiddenUntil: null } : n)))
+  }, [])
+
   /* ---- fullscreen + engagement ---- */
   useEffect(() => {
     const onFs = () => setIsFull(!!document.fullscreenElement)
@@ -178,7 +187,7 @@ export default function DemoApp() {
       const item: Item = {
         id: nextId(), text: tags.text, section, status: 'active', doneDay: null,
         priority: tags.priority, projectId: tags.projectId, agent: tags.agent,
-        details: '', hidden: false, createdDay: todayISO(), remindAt: null,
+        details: '', hidden: false, hiddenUntil: null, createdDay: todayISO(), remindAt: null,
       }
       setItems((xs) => [...xs, item])
       logAction('created', item.text, item.id, item.projectId, item.priority)
@@ -230,13 +239,13 @@ export default function DemoApp() {
       setItems((xs) => xs.map((x) => x.id === item.id ? { ...x, section: 'today' as const, remindAt: null } : x))
       logAction('moved', item.text, item.id, item.projectId, item.priority)
     },
-    hideItem(item: Item) {
-      setItems((xs) => xs.map((x) => (x.id === item.id ? { ...x, hidden: true } : x)))
+    hideItem(item: Item, duration: HideDuration) {
+      setItems((xs) => xs.map((x) => (x.id === item.id ? { ...x, hidden: true, hiddenUntil: hideUntil(duration) } : x)))
       logAction('paused', item.text, item.id, item.projectId, item.priority)
     },
     unhide(id: number) {
       const item = items.find((x) => x.id === id)
-      setItems((xs) => xs.map((x) => (x.id === id ? { ...x, hidden: false } : x)))
+      setItems((xs) => xs.map((x) => (x.id === id ? { ...x, hidden: false, hiddenUntil: null } : x)))
       if (item) logAction('unpaused', item.text, item.id, item.projectId, item.priority)
     },
     setDetails(id: number, body: string) {
@@ -255,7 +264,7 @@ export default function DemoApp() {
       if (proj.length !== projects.length) setProjects(proj)
       const note: Note = {
         id: nextId(), body: tags.text, priority: tags.priority,
-        projectId: tags.projectId, hidden: false, collapsed: false,
+        projectId: tags.projectId, hidden: false, hiddenUntil: null, collapsed: false,
       }
       setNotes((ns) => [...ns, note])
     },
@@ -277,11 +286,11 @@ export default function DemoApp() {
     noteDelete(id: number) {
       setNotes((ns) => ns.filter((n) => n.id !== id))
     },
-    noteHide(id: number) {
-      setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, hidden: true } : n)))
+    noteHide(id: number, duration: HideDuration) {
+      setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, hidden: true, hiddenUntil: hideUntil(duration) } : n)))
     },
     noteUnhide(id: number) {
-      setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, hidden: false } : n)))
+      setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, hidden: false, hiddenUntil: null } : n)))
     },
     noteDownload(id: number) {
       const note = notes.find((n) => n.id === id)

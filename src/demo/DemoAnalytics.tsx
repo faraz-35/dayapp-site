@@ -163,38 +163,55 @@ export default function DemoAnalytics({ items, actions, sessions, projects }: {
         fellByDay.set(a.day, arr)
       })
 
-    return { keys, doneRows, doneAll, doneByDay, streak, missedByDay, timeByDay, timeByItem, fellByDay }
+    // the Created subject: one `created` action per task, nothing to fold
+    const createdRows = ordered.filter((a) => a.verb === 'created' && daySet.has(a.day))
+    const createdByDay = new Map<string, number>()
+    ordered.filter((a) => a.verb === 'created').forEach((a) =>
+      createdByDay.set(a.day, (createdByDay.get(a.day) ?? 0) + 1))
+
+    return { keys, doneRows, doneAll, doneByDay, createdByDay, createdRows, streak, missedByDay, timeByDay, timeByItem, fellByDay }
   }, [actions, items, sessions, range])
 
-  const doneCount = d.doneRows.length
+  const [subject, setSubject] = useState<'done' | 'created'>('done')
+  const rows = subject === 'done' ? d.doneRows : d.createdRows
+  const countByDay = subject === 'done' ? d.doneByDay : d.createdByDay
+  const doneCount = rows.length
   const daysWithSignal = d.keys.filter((k) =>
-    (d.doneByDay.get(k) ?? 0) > 0 || (d.missedByDay.get(k)?.length ?? 0) > 0 || (d.timeByDay.get(k) ?? 0) > 0)
+    (countByDay.get(k) ?? 0) > 0 ||
+    (subject === 'done' && ((d.missedByDay.get(k)?.length ?? 0) > 0 || (d.timeByDay.get(k) ?? 0) > 0)))
 
   const splits = useMemo(() => {
     const proj = new Map<string, number>()
-    d.doneRows.forEach((a) => proj.set(a.project ?? 'none', (proj.get(a.project ?? 'none') ?? 0) + 1))
+    rows.forEach((a) => proj.set(a.project ?? 'none', (proj.get(a.project ?? 'none') ?? 0) + 1))
     const roster = [
       ...projects.map((p) => ({ name: p.name, count: proj.get(p.name) ?? 0 })),
       ...(proj.get('none') ? [{ name: 'none', count: proj.get('none')! }] : []),
     ]
     const prio = [0, 0, 0, 0] // P1 P2 P3 unmarked
-    d.doneRows.forEach((a) => prio[a.priority == null ? 3 : a.priority - 1]++)
+    rows.forEach((a) => prio[a.priority == null ? 3 : a.priority - 1]++)
     const total = Math.max(1, doneCount)
     return { roster: roster.filter((r) => r.count > 0), prio, total }
-  }, [d, projects, doneCount])
+  }, [rows, projects, doneCount])
 
   const monthName = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   const pickedRow = picked ? {
-    done: d.doneAll.filter((a) => a.day === picked),
-    fell: d.fellByDay.get(picked) ?? [],
-    missed: picked < todayISO() ? (d.missedByDay.get(picked) ?? []) : [],
-    time: d.timeByItem.get(picked) ?? new Map<string, number>(),
-    timeTotal: d.timeByDay.get(picked) ?? 0,
+    done: subject === 'done'
+      ? d.doneAll.filter((a) => a.day === picked)
+      : d.createdRows.filter((a) => a.day === picked),
+    fell: subject === 'done' ? (d.fellByDay.get(picked) ?? []) : [],
+    missed: subject === 'done' && picked < todayISO() ? (d.missedByDay.get(picked) ?? []) : [],
+    time: subject === 'done' ? (d.timeByItem.get(picked) ?? new Map<string, number>()) : new Map<string, number>(),
+    timeTotal: subject === 'done' ? (d.timeByDay.get(picked) ?? 0) : 0,
   } : null
+  const dayTotal = d.keys.slice(1).reduce((acc, k) => acc + (d.missedByDay.get(k)?.length ?? 0), 0)
 
   return (
     <div className="analytics">
       <div className="filter-bar">
+        <span className="subj">
+          <button className={'pill' + (subject === 'done' ? ' active' : '')} onClick={() => setSubject('done')}>Done</button>
+          <button className={'pill' + (subject === 'created' ? ' active' : '')} onClick={() => setSubject('created')}>Created</button>
+        </span>
         {(['today', 'week', 'month', 'all'] as Range[]).map((r) => (
           <button key={r} className={'pill' + (range === r ? ' active' : '')} onClick={() => { setRange(r); setPicked(null) }}>
             {r === 'today' ? 'Today' : r === 'week' ? 'Week' : r === 'month' ? 'Month' : 'All'}
@@ -203,17 +220,17 @@ export default function DemoAnalytics({ items, actions, sessions, projects }: {
       </div>
 
       <div className="an-card an-hero">
-        <div className="an-stat accent"><span className="v">{doneCount}</span><span className="l">Done</span></div>
+        <div className="an-stat accent"><span className="v">{doneCount}</span><span className="l">{subject === 'done' ? 'Done' : 'Created'}</span></div>
         {range !== 'today' && <div className="an-stat"><span className="v">{(doneCount / SPAN[range]).toFixed(1)}</span><span className="l">Avg / day</span></div>}
-        <div className="an-stat"><span className="v">{d.streak}</span><span className="l">Day streak</span></div>
-        <div className="an-stat"><span className="v">{d.keys.slice(1).reduce((acc, k) => acc + (d.missedByDay.get(k)?.length ?? 0), 0)}</span><span className="l">Daily missed</span></div>
-        <div className="an-stat"><span className="v">{d.fellByDay.get(todayISO())?.length ?? 0}</span><span className="l">Today missed</span></div>
+        {subject === 'done' && <div className="an-stat"><span className="v">{d.streak}</span><span className="l">Day streak</span></div>}
+        {subject === 'done' && <div className="an-stat"><span className="v">{dayTotal}</span><span className="l">Daily missed</span></div>}
+        {subject === 'done' && <div className="an-stat"><span className="v">{d.fellByDay.get(todayISO())?.length ?? 0}</span><span className="l">Today missed</span></div>}
       </div>
 
       <div className="an-row3">
         <div className="an-card an-activity">
           <div className="an-card-title"><span>Activity</span><span className="hint">{monthName}</span></div>
-          {monthGrid(effectiveCounts(d.doneAll), picked, setPicked)}
+          {monthGrid(subject === 'done' ? effectiveCounts(d.doneAll) : d.createdByDay, picked, setPicked)}
         </div>
 
         <div className="an-card">
@@ -260,7 +277,7 @@ export default function DemoAnalytics({ items, actions, sessions, projects }: {
                 <span className="an-daycard-day">{picked === todayISO() ? 'Today' : fmtDay(picked!)}</span>
               </span>
               <span className="hint">
-                <span>{pickedRow.done.length} done</span>
+                <span>{pickedRow.done.length} {subject === 'done' ? 'done' : 'created'}</span>
                 {pickedRow.missed.length > 0 && <span>{pickedRow.missed.length} missed</span>}
                 {pickedRow.timeTotal > 60 && <span>{fmtDuration(pickedRow.timeTotal)}</span>}
               </span>
@@ -268,7 +285,7 @@ export default function DemoAnalytics({ items, actions, sessions, projects }: {
             <div className="an-day-detail">
               {pickedRow.done.map((a, i) => (
                 <div className="dd-row" key={`d${i}`}>
-                  <span className="dd-mark">✓</span>
+                  <span className="dd-mark">{subject === 'done' ? '✓' : '+'}</span>
                   <span className="dd-time">{hhmm(a.ts)}</span>
                   <span className="dd-text">{a.text}</span>
                   {pickedRow.time.get(a.text) && <span className="dd-secs">{fmtDuration(pickedRow.time.get(a.text)!)}</span>}
@@ -295,7 +312,7 @@ export default function DemoAnalytics({ items, actions, sessions, projects }: {
                 </div>
               ))}
               {pickedRow.done.length === 0 && pickedRow.fell.length === 0 && pickedRow.missed.length === 0 && (
-                <div className="dd-empty">A quiet day — nothing done, nothing missed.</div>
+                <div className="dd-empty">{subject === 'done' ? 'A quiet day — nothing done, nothing missed.' : 'Nothing was created that day.'}</div>
               )}
             </div>
           </>
@@ -307,9 +324,9 @@ export default function DemoAnalytics({ items, actions, sessions, projects }: {
               <button key={k} className="an-day" onClick={() => setPicked(k)}>
                 <span className="d">{k === todayISO() ? 'Today' : fmtDay(k)}</span>
                 <span className="s">
-                  <span className="done">{d.doneByDay.get(k) ?? 0} done</span>
-                  {(d.missedByDay.get(k)?.length ?? 0) > 0 && <span>{d.missedByDay.get(k)!.length} missed</span>}
-                  {(d.timeByDay.get(k) ?? 0) > 60 && <span className="time">{fmtDuration(d.timeByDay.get(k)!)}</span>}
+                  <span className="done">{countByDay.get(k) ?? 0} {subject === 'done' ? 'done' : 'created'}</span>
+                  {subject === 'done' && (d.missedByDay.get(k)?.length ?? 0) > 0 && <span>{d.missedByDay.get(k)!.length} missed</span>}
+                  {subject === 'done' && (d.timeByDay.get(k) ?? 0) > 60 && <span className="time">{fmtDuration(d.timeByDay.get(k)!)}</span>}
                 </span>
               </button>
             ))}

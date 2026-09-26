@@ -197,10 +197,10 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 }
 
 /* ---- live demo: the second screen — the app itself, in the browser ------- */
-/* The window renders at the app's proportions (a 620px column, 13px type)
-   centered in the site column; the action log opens beside it. In fullscreen
-   the window fills the viewport height and the window body becomes the one
-   scroll container. Class names follow the app's own stylesheet. */
+/* The window fills the site column (the sections' own width) at 13px type —
+   the app stretched wide, as Faraz runs it. In fullscreen the window fills
+   the viewport height and the window body becomes the one scroll container.
+   Class names follow the app's own stylesheet. */
 
 .demo-section {
   min-height: 100vh;
@@ -212,7 +212,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 
 .demo-section .wrap { padding-top: 48px; padding-bottom: 48px; }
 
-.demo-section h2 { margin-bottom: 12px; }
+.demo-section h2 { margin-bottom: 24px; }
 
 .demo-grid-inner {
   display: flex;
@@ -222,8 +222,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 }
 
 .app-window {
-  width: 620px;
-  max-width: 100%;
+  width: 100%;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -258,6 +257,58 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 }
 
 .win-left, .win-right { display: flex; align-items: center; gap: 2px; }
+
+/* the running-timer chip, ported from the app: pulse + elapsed, × discards */
+.timer-chip {
+  display: flex;
+  align-items: stretch;
+  margin-right: 4px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.timer-chip-main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 9px;
+  color: var(--text);
+}
+.timer-chip-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  animation: timer-pulse 1.4s ease-in-out infinite;
+}
+@keyframes timer-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(123, 140, 255, 0.45); }
+  50%      { opacity: 0.55; box-shadow: 0 0 0 3px rgba(123, 140, 255, 0); }
+}
+.timer-chip-elapsed {
+  font-size: 12px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.timer-chip-discard {
+  width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  font-size: 13px;
+  background: none;
+  border: none;
+  border-left: 1px solid var(--border);
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.08s ease, background 0.08s ease;
+}
+.timer-chip-discard:hover { color: var(--danger); background: var(--bg-hover); }
 
 .win-ico {
   width: 24px;
@@ -301,7 +352,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   align-items: stretch;
 }
 .demo-root.full .app-window {
-  width: min(620px, 100%);
+  width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -368,27 +419,35 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 }
 .capture:focus-within { border-color: var(--accent); }
 
+/* Every demo text field is bare: no chrome, the capture-line language. The
+   token fields add the transparent-text + mirror treatment on top. */
+.capture input,
+.capture textarea,
+.item-edit input {
+  width: 100%;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  min-height: 18px;
+  display: block;
+}
+.capture textarea { resize: none; overflow: hidden; }
+.capture input::placeholder,
+.capture textarea::placeholder,
+.item-edit input::placeholder { color: var(--text-faint); }
+
 .tok-field { position: relative; display: block; }
 .tok-field > input,
 .tok-field > textarea {
   position: relative;
   z-index: 1;
-  width: 100%;
-  background: none;
-  border: none;
-  outline: none;
   color: transparent;
   caret-color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.4;
-  resize: none;
-  overflow: hidden;
-  min-height: 18px;
-  display: block;
 }
-.tok-field > input::placeholder,
-.tok-field > textarea::placeholder { color: var(--text-faint); }
 
 .tok-mirror {
   position: absolute;
@@ -411,6 +470,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 /* ---- item rows ------------------------------------------------------------ */
 
 .item {
+  position: relative; /* owns its popovers */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -854,6 +914,37 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   padding: 0 6px;
   flex-wrap: wrap;
 }
+/* the Done | Created subject toggle: the pill language set off by a hairline */
+.subj {
+  display: inline-flex;
+  align-items: center;
+  border-right: 1px solid var(--border);
+  padding-right: 6px;
+  margin-right: 8px;
+}
+
+/* hide-duration menu (items + notes) — the row-menu language, label + sub.
+   The site has no global button reset, so the menu's buttons need the full
+   bare treatment or native chrome shows through. */
+.hide-menu { min-width: 190px; }
+.hide-menu-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  text-align: left;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.08s ease;
+}
+.hide-menu-item:hover { background: var(--bg-hover); }
+.hide-menu-label { font-size: 12px; color: var(--text); }
+.hide-menu-sub { font-size: 10px; color: var(--text-faint); }
 .pill {
   font-size: 11px;
   font-weight: 500;

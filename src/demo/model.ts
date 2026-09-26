@@ -19,6 +19,7 @@ export interface Item {
   agent: boolean
   details: string
   hidden: boolean
+  hiddenUntil: string | null
   createdDay: string
   remindAt: string | null
 }
@@ -29,6 +30,7 @@ export interface Note {
   priority: Priority
   projectId: number | null
   hidden: boolean
+  hiddenUntil: string | null
   collapsed: boolean
 }
 
@@ -289,6 +291,16 @@ export function totalSecs(sessions: SessionRow[], itemId: number): number {
 
 export const tierRank = (p: Priority) => (p == null ? 4 : p)
 
+/* ---- hiding (the duration popover) ---------------------------------------- */
+
+export type HideDuration = 'forever' | 'day' | 'week' | 'month'
+
+// The date a duration hides until — forever is null, the sweep's signal.
+export function hideUntil(d: HideDuration): string | null {
+  if (d === 'forever') return null
+  return dayISO(d === 'day' ? -1 : d === 'week' ? -7 : -30)
+}
+
 /* ---- the tick store -------------------------------------------------------- */
 /* The live timer re-renders two tiny leaves (the row's elapsed, the header
    chip) once a second — never the demo tree. The driver runs only while a
@@ -350,27 +362,27 @@ export function makeSeed(): Seed {
   ]
 
   const items: Item[] = [
-    { id: 1, text: 'Review PR #214 — search ranking tweak', section: 'today', status: 'active', doneDay: null, priority: 2, projectId: 1, agent: false, details: '', hidden: false, createdDay: dayISO(2), remindAt: null },
-    { id: 2, text: 'Fix crash on first-launch onboarding', section: 'today', status: 'done', doneDay: todayISO(), priority: 1, projectId: 1, agent: false, details: '', hidden: false, createdDay: dayISO(1), remindAt: null },
-    { id: 3, text: 'Draft the monthly investor update', section: 'today', status: 'active', doneDay: null, priority: null, projectId: 2, agent: false, details: '', hidden: false, createdDay: todayISO(), remindAt: null },
-    { id: 4, text: 'Compile user interview insights', section: 'today', status: 'active', doneDay: null, priority: null, projectId: 2, agent: true, details: 'Read the six interview transcripts in the Research doc. Pull out: (1) recurring onboarding pain points, (2) why users churn before the first aha moment, (3) feature requests mentioned by three or more people. Write the summary as a note titled "Interview synthesis".', hidden: false, createdDay: dayISO(2), remindAt: null },
-    { id: 5, text: 'Gym — push day', section: 'today', status: 'active', doneDay: null, priority: null, projectId: 3, agent: false, details: '', hidden: false, createdDay: dayISO(4), remindAt: null },
-    { id: 6, text: 'Morning deep work block', section: 'daily', status: 'active', doneDay: null, priority: null, projectId: null, agent: false, details: '', hidden: false, createdDay: dayISO(20), remindAt: null },
-    { id: 7, text: 'Read 20 pages', section: 'daily', status: 'active', doneDay: null, priority: null, projectId: null, agent: false, details: '', hidden: false, createdDay: dayISO(18), remindAt: null },
-    { id: 8, text: 'Walk 8k steps', section: 'daily', status: 'active', doneDay: todayISO(), priority: null, projectId: 3, agent: false, details: '', hidden: false, createdDay: dayISO(12), remindAt: null },
-    { id: 9, text: 'Renew meridian SSL certificate', section: 'backlog', status: 'active', doneDay: null, priority: 1, projectId: 1, agent: false, details: '', hidden: false, createdDay: dayISO(12), remindAt: dayISO(-3) },
-    { id: 10, text: 'Rewrite the onboarding flow', section: 'backlog', status: 'active', doneDay: null, priority: 2, projectId: 2, agent: false, details: '', hidden: false, createdDay: dayISO(9), remindAt: null },
-    { id: 11, text: 'Sketch the mobile widget', section: 'backlog', status: 'active', doneDay: null, priority: 3, projectId: 1, agent: true, details: 'Three widgets: today list, running timer, quick capture. Sketch on paper first.', hidden: false, createdDay: dayISO(6), remindAt: null },
-    { id: 12, text: 'Deep-clean the apartment', section: 'backlog', status: 'active', doneDay: null, priority: null, projectId: null, agent: false, details: '', hidden: false, createdDay: dayISO(15), remindAt: null },
-    { id: 13, text: 'Retire the old landing A/B test', section: 'backlog', status: 'active', doneDay: null, priority: null, projectId: 2, agent: false, details: '', hidden: true, createdDay: dayISO(11), remindAt: null },
+    { id: 1, text: 'Review PR #214 — search ranking tweak', section: 'today', status: 'active', doneDay: null, priority: 2, projectId: 1, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(2), remindAt: null },
+    { id: 2, text: 'Fix crash on first-launch onboarding', section: 'today', status: 'done', doneDay: todayISO(), priority: 1, projectId: 1, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(1), remindAt: null },
+    { id: 3, text: 'Draft the monthly investor update', section: 'today', status: 'active', doneDay: null, priority: null, projectId: 2, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: todayISO(), remindAt: null },
+    { id: 4, text: 'Compile user interview insights', section: 'today', status: 'active', doneDay: null, priority: null, projectId: 2, agent: true, details: 'Read the six interview transcripts in the Research doc. Pull out: (1) recurring onboarding pain points, (2) why users churn before the first aha moment, (3) feature requests mentioned by three or more people. Write the summary as a note titled "Interview synthesis".', hidden: false, hiddenUntil: null, createdDay: dayISO(2), remindAt: null },
+    { id: 5, text: 'Gym — push day', section: 'today', status: 'active', doneDay: null, priority: null, projectId: 3, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(4), remindAt: null },
+    { id: 6, text: 'Morning deep work block', section: 'daily', status: 'active', doneDay: null, priority: null, projectId: null, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(20), remindAt: null },
+    { id: 7, text: 'Read 20 pages', section: 'daily', status: 'active', doneDay: null, priority: null, projectId: null, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(18), remindAt: null },
+    { id: 8, text: 'Walk 8k steps', section: 'daily', status: 'active', doneDay: todayISO(), priority: null, projectId: 3, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(12), remindAt: null },
+    { id: 9, text: 'Renew meridian SSL certificate', section: 'backlog', status: 'active', doneDay: null, priority: 1, projectId: 1, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(12), remindAt: dayISO(-3) },
+    { id: 10, text: 'Rewrite the onboarding flow', section: 'backlog', status: 'active', doneDay: null, priority: 2, projectId: 2, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(9), remindAt: null },
+    { id: 11, text: 'Sketch the mobile widget', section: 'backlog', status: 'active', doneDay: null, priority: 3, projectId: 1, agent: true, details: 'Three widgets: today list, running timer, quick capture. Sketch on paper first.', hidden: false, hiddenUntil: null, createdDay: dayISO(6), remindAt: null },
+    { id: 12, text: 'Deep-clean the apartment', section: 'backlog', status: 'active', doneDay: null, priority: null, projectId: null, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(15), remindAt: null },
+    { id: 13, text: 'Retire the old landing A/B test', section: 'backlog', status: 'active', doneDay: null, priority: null, projectId: 2, agent: false, details: '', hidden: true, hiddenUntil: null, createdDay: dayISO(11), remindAt: null },
   ]
 
   const notes: Note[] = [
-    { id: 1, body: 'Launch checklist\nscreenshots · install link · first post draft', priority: 1, projectId: null, hidden: false, collapsed: false },
-    { id: 2, body: 'Interview synthesis draft\nthe churn story is the onboarding story', priority: 2, projectId: 2, hidden: false, collapsed: false },
-    { id: 3, body: 'Idea: a quote screensaver for the idle minutes', priority: null, projectId: 2, hidden: false, collapsed: false },
-    { id: 4, body: 'Deep Work — lines to reread\n"clarity about what matters provides clarity about what does not"', priority: null, projectId: null, hidden: false, collapsed: false },
-    { id: 5, body: 'Domain shortlist from March\nall of these are taken now', priority: null, projectId: null, hidden: true, collapsed: false },
+    { id: 1, body: 'Launch checklist\nscreenshots · install link · first post draft', priority: 1, projectId: null, hidden: false, hiddenUntil: null, collapsed: false },
+    { id: 2, body: 'Interview synthesis draft\nthe churn story is the onboarding story', priority: 2, projectId: 2, hidden: false, hiddenUntil: null, collapsed: false },
+    { id: 3, body: 'Idea: a quote screensaver for the idle minutes', priority: null, projectId: 2, hidden: false, hiddenUntil: null, collapsed: false },
+    { id: 4, body: 'Deep Work — lines to reread\n"clarity about what matters provides clarity about what does not"', priority: null, projectId: null, hidden: false, hiddenUntil: null, collapsed: false },
+    { id: 5, body: 'Domain shortlist from March\nall of these are taken now', priority: null, projectId: null, hidden: true, hiddenUntil: null, collapsed: false },
   ]
 
   const rnd = mulberry32(0xdada)

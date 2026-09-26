@@ -387,11 +387,7 @@ export default function App() {
       {/* ---------- live demo: the second screen, full width ---------- */}
       <section className="demo-section">
         <div className="wrap">
-          <h2>Working demo</h2>
-          <p className="section-sub">
-            The real app, running in your browser. Create tasks and notes, time them, tag them,
-            check the analytics — and hover the window to use the keyboard.
-          </p>
+          <h2>Interactive demo</h2>
           <Suspense fallback={<DemoSkeleton />}>
             <MiniDayApp />
           </Suspense>
@@ -401,13 +397,7 @@ export default function App() {
       {/* ---------- videos ---------- */}
       <Section
         id="watch"
-        title="Watch it work — pick a demo"
-        sub={
-          <>
-            Filmed entirely inside the app's built-in <em>demo mode</em> — a disposable seeded
-            database for showing DayApp to other people without ever exposing your real list.
-          </>
-        }
+        title="Watch it work"
       >
         <div className="media-tabs" role="tablist" aria-label="demo format">
           {MEDIA_TABS.map((t) => (

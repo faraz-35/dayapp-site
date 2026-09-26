@@ -8,10 +8,10 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   fmtClock, fmtDuration, fmtReminder, projectColor, clipProject, tierRank,
   todayISO, tokenSpans,
-  type Item, type Note, type Project, type Section, type SessionRow,
+  type HideDuration, type Item, type Note, type Project, type Section, type SessionRow,
 } from './model'
 
-export type Pop = { kind: 'project' | 'remind'; id: number } | null
+export type Pop = { kind: 'project' | 'remind' | 'hide'; on: 'task' | 'note'; id: number } | null
 export type Sel = { kind: 'task' | 'note'; id: number } | null
 
 export interface CaptureHandle {
@@ -48,13 +48,13 @@ export interface DemoListProps {
     createProject(name: string): number
     toggleTimer(item: Item): void
     promote(item: Item): void
-    hideItem(item: Item): void
+    hideItem(item: Item, duration: HideDuration): void
     unhide(id: number): void
     setDetails(id: number, body: string): void
     noteBody(id: number, body: string): void
     noteCollapse(id: number): void
     noteDelete(id: number): void
-    noteHide(id: number): void
+    noteHide(id: number, duration: HideDuration): void
     noteUnhide(id: number): void
     noteDownload(id: number): void
   }
@@ -77,6 +77,7 @@ export default function DemoList(p: DemoListProps) {
         sel={p.sel}
         setSel={p.setSel}
         pop={p.pop}
+        setPop={p.setPop}
         act={p.act}
       />
 
@@ -193,7 +194,6 @@ function CaptureField({ handleRef, onSubmit, placeholder, textarea }: {
         )}
         <div className="tok-mirror" data-multi={textarea ? '1' : undefined}>
           <TokenText text={val} />
-          {!val && <span className="tok-ph">{placeholder}</span>}
         </div>
       </div>
     </form>
@@ -220,12 +220,13 @@ function firstProseLine(body: string): string {
   return lines.find((l) => l && !tokenOnly(l)) ?? ''
 }
 
-function NoteGroups({ notes, projects, sel, setSel, act }: {
+function NoteGroups({ notes, projects, sel, setSel, pop, setPop, act }: {
   notes: Note[]
   projects: Project[]
   sel: Sel
   setSel(s: Sel): void
   pop: Pop
+  setPop(p: Pop): void
   act: DemoListProps['act']
 }) {
   const groups = noteGroupsOf(notes)
@@ -242,7 +243,7 @@ function NoteGroups({ notes, projects, sel, setSel, act }: {
             )}
             {rows.map((n) => (
               <NoteCard key={n.id} note={n} projects={projects} selected={sel?.kind === 'note' && sel.id === n.id}
-                setSel={setSel} act={act} />
+                setSel={setSel} pop={pop} setPop={setPop} act={act} />
             ))}
           </div>
         )
@@ -251,11 +252,13 @@ function NoteGroups({ notes, projects, sel, setSel, act }: {
   )
 }
 
-function NoteCard({ note, projects, selected, setSel, act }: {
+function NoteCard({ note, projects, selected, setSel, pop, setPop, act }: {
   note: Note
   projects: Project[]
   selected: boolean
   setSel(s: Sel): void
+  pop: Pop
+  setPop(p: Pop): void
   act: DemoListProps['act']
 }) {
   const [val, setVal] = useState(note.body)
@@ -326,11 +329,15 @@ function NoteCard({ note, projects, selected, setSel, act }: {
                 <TrayIcon />
               </button>
             )}
-            <button className="item-action" data-kb="3" title="Hide" onClick={(e) => { e.stopPropagation(); act.noteHide(note.id) }}>◐</button>
+            <button className="item-action" data-kb="3" title="Hide"
+              onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'hide' && pop.on === 'note' && pop.id === note.id ? null : { kind: 'hide', on: 'note', id: note.id }) }}>◐</button>
             <button className="item-action danger" data-kb="4" title="Delete" onClick={(e) => { e.stopPropagation(); act.noteDelete(note.id) }}>×</button>
           </>
         )}
       </div>
+      {pop && pop.on === 'note' && pop.id === note.id && pop.kind === 'hide' && (
+        <HideMenu verb="Hide" onPick={(d) => { act.noteHide(note.id, d); setPop(null) }} />
+      )}
     </div>
   )
 }
@@ -443,7 +450,7 @@ function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, 
         )}
         {!editing && (
           <div className="item-meta">
-            {item.hidden && <span className="hidden-chip">◐ forever</span>}
+            {item.hidden && <span className="hidden-chip">◐ {item.hiddenUntil ? `until ${fmtReminder(item.hiddenUntil)}` : 'forever'}</span>}
             {!isTiming && total > 0 && <span className="time-label" title="Time tracked">⏱ {fmtDuration(total)}</span>}
             {item.remindAt && <span className="reminder-chip" title={`Reminds on ${item.remindAt}`}>→ {fmtReminder(item.remindAt)}</span>}
             <span className={`meta-priority${isTiming ? ' timing' : ''}`}>
@@ -477,12 +484,13 @@ function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, 
               </>
             ) : (
               <>
-                <button className={`item-action${pop?.kind === 'project' && pop.id === item.id ? ' active' : ''}`} data-kb="2" title="Project"
-                  onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'project' && pop.id === item.id ? null : { kind: 'project', id: item.id }) }}>#</button>
-                <button className={`item-action${pop?.kind === 'remind' && pop.id === item.id ? ' active' : ''}`} data-kb="3" title="Remind me"
-                  onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'remind' && pop.id === item.id ? null : { kind: 'remind', id: item.id }) }}>◷</button>
-                <button className="item-action" data-kb="4" title={item.section === 'daily' ? 'Pause' : 'Hide'}
-                  onClick={(e) => { e.stopPropagation(); act.hideItem(item) }}>◐</button>
+                <button className={`item-action${pop?.kind === 'project' && pop.on === 'task' && pop.id === item.id ? ' active' : ''}`} data-kb="2" title="Project"
+                  onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'project' && pop.on === 'task' && pop.id === item.id ? null : { kind: 'project', on: 'task', id: item.id }) }}>#</button>
+                <button className={`item-action${pop?.kind === 'remind' && pop.on === 'task' && pop.id === item.id ? ' active' : ''}`} data-kb="3" title="Remind me"
+                  onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'remind' && pop.on === 'task' && pop.id === item.id ? null : { kind: 'remind', on: 'task', id: item.id }) }}>◷</button>
+                <button className={`item-action${pop?.kind === 'hide' && pop.on === 'task' && pop.id === item.id ? ' active' : ''}`} data-kb="4"
+                  title={item.section === 'daily' ? 'Pause' : 'Hide'}
+                  onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'hide' && pop.on === 'task' && pop.id === item.id ? null : { kind: 'hide', on: 'task', id: item.id }) }}>◐</button>
                 <button className={`item-action${detailsOpen ? ' active' : ''}`} data-kb="5"
                   title={detailsOpen ? 'Collapse details' : item.details ? 'Expand details' : 'Add details'}
                   onClick={(e) => { e.stopPropagation(); setDetailsId(detailsOpen ? null : item.id) }}>
@@ -493,7 +501,7 @@ function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, 
             )}
           </>
         )}
-        {pop && pop.id === item.id && pop.kind === 'project' && (
+        {pop && pop.on === 'task' && pop.id === item.id && pop.kind === 'project' && (
           <ProjectMenu
             projects={projects}
             current={item.projectId}
@@ -502,7 +510,7 @@ function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, 
             onClose={() => setPop(null)}
           />
         )}
-        {pop && pop.id === item.id && pop.kind === 'remind' && (
+        {pop && pop.on === 'task' && pop.id === item.id && pop.kind === 'remind' && (
           <div className="row-menu remind-stub">
             <div className="row-menu-title">◷ Remind me</div>
             <p>
@@ -510,6 +518,12 @@ function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, 
               That needs real days on your Mac — it's left out of this demo.
             </p>
           </div>
+        )}
+        {pop && pop.on === 'task' && pop.id === item.id && pop.kind === 'hide' && (
+          <HideMenu
+            verb={item.section === 'daily' ? 'Pause' : 'Hide'}
+            onPick={(d) => { act.hideItem(item, d); setPop(null) }}
+          />
         )}
       </div>
     </>
@@ -669,6 +683,35 @@ function ProjectMenu({ projects, current, onPick, onCreate, onClose }: {
           </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+/* ---- the hide-duration popover ---------------------------------------------- */
+
+const HIDE_OPTIONS: { id: HideDuration; label: string; sub: string }[] = [
+  { id: 'forever', label: 'Forever', sub: 'until unhidden' },
+  { id: 'day', label: 'For a day', sub: 'until tomorrow' },
+  { id: 'week', label: 'For a week', sub: 'until next week' },
+  { id: 'month', label: 'For a month', sub: 'until next month' },
+]
+
+function HideMenu({ verb, onPick }: {
+  verb: 'Hide' | 'Pause'
+  onPick(d: HideDuration): void
+}) {
+  return (
+    <div className="row-menu hide-menu" onClick={(e) => e.stopPropagation()}>
+      {HIDE_OPTIONS.map((o) => (
+        <button
+          key={o.id}
+          className="hide-menu-item"
+          onMouseDown={(e) => { e.preventDefault(); onPick(o.id) }}
+        >
+          <span className="hide-menu-label">{o.label}</span>
+          <span className="hide-menu-sub">{o.id === 'forever' && verb === 'Pause' ? 'until unpaused' : o.sub}</span>
+        </button>
+      ))}
     </div>
   )
 }
