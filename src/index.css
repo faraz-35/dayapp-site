@@ -1414,7 +1414,70 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   font-style: italic;
 }
 
+/* ---- settings page (⌘P → Open Settings, or the gear) ------------------------ */
+/* The app's SettingsView language at demo scope: analytics cards of rows,
+   hover tint, the On/Off state at the right, Card/Bare pills. The site has
+   no global button reset, so .settings-main carries the full bare treatment. */
+
+.settings {
+  padding: 4px 4px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
+.settings-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+  border-radius: 6px;
+}
+.settings-row:hover { background: var(--bg-hover); }
+.settings-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 4px;
+  text-align: left;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.settings-name { font-size: 13px; }
+.settings-hint {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-state {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+.settings-state.on { color: var(--accent); }
+
+/* UI option (Settings → UI): the resting fills, the app's two states —
+   notes read Card (the soft fill) by default, tasks read Bare; each surface
+   picks. Hover keeps its tint either way. */
+.demo-root.notes-bare .note { background: none; }
+.demo-root.notes-bare .note:hover,
+.demo-root.notes-bare .note.focused { background: var(--bg-hover); }
+.demo-root.sections-card .item { background: var(--bg-soft); }
 
 /* ---- videos: one surface, format pills choose what's on it ----------- */
 

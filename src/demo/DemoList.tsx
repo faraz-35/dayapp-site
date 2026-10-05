@@ -21,6 +21,8 @@ export interface CaptureHandle {
 }
 
 export interface DemoListProps {
+  // the Tasks feature (Settings): off takes the capture + all three sections
+  tasksArea: boolean
   today: Item[]
   daily: Item[]
   backlog: Item[]
@@ -92,13 +94,17 @@ export default function DemoList(p: DemoListProps) {
       )}
 
       {/* ---- tasks: ONE capture above the stack, ##t / ##d / ##b route ---- */}
-      <div className="surface-head tasks-head">Tasks</div>
-      <CaptureField
-        surface="task-capture"
-        handleRef={p.taskCapRef}
-        placeholder="Add a task — plain lands in Today · ##d / ##b route · !1 #tag @ mark"
-        onSubmit={p.act.addTask}
-      />
+      {p.tasksArea && (
+        <>
+          <div className="surface-head tasks-head">Tasks</div>
+          <CaptureField
+            surface="task-capture"
+            handleRef={p.taskCapRef}
+            placeholder="Add a task — plain lands in Today · ##d / ##b route · !1 #tag @ mark"
+            onSubmit={p.act.addTask}
+          />
+        </>
+      )}
       {p.showToday && <ItemSection
         name="today" items={p.today} projects={p.projects}
         activeSession={p.activeSession} nowMs={p.nowMs} totalSecsOf={p.totalSecsOf}

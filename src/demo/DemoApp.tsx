@@ -15,12 +15,13 @@ import {
 import DemoList, { type CaptureHandle, type Pop, type Sel } from './DemoList'
 import DemoAnalytics from './DemoAnalytics'
 import DemoEntries from './DemoEntries'
+import DemoSettings, { type Features, type FeatureKey, type HeaderBtn, type HeaderBtns } from './DemoSettings'
 import { DemoPalette, DemoSearch, type PaletteEntry } from './DemoOverlays'
 
-type View = 'list' | 'analytics' | 'journal' | 'quotes'
+type View = 'list' | 'analytics' | 'journal' | 'quotes' | 'settings'
 
 const VIEW_TITLES: Record<View, string> = {
-  list: 'Live @ Demo', analytics: 'Analytics', journal: 'Journal', quotes: 'Quotes',
+  list: 'Live @ Demo', analytics: 'Analytics', journal: 'Journal', quotes: 'Quotes', settings: 'Settings',
 }
 
 const ADDRESS_KEYS = new Set(['n', 't', 'd', 'b'])
@@ -59,6 +60,18 @@ export default function DemoApp() {
   const [showBacklog, setShowBacklog] = useState(true)
   const [focusMode, setFocusMode] = useState(false)
 
+  // the settings page (⌘P → Open Settings, or the gear): existence (Features),
+  // the resting fills (UI), the window's icon buttons (Header). Existence is
+  // configuration — Show Default View and Reset the Demo never touch it.
+  const [features, setFeatures] = useState<Features>({
+    tasks: true, today: true, daily: true, backlog: true, notes: true,
+  })
+  const [notesCard, setNotesCard] = useState(true)
+  const [tasksCard, setTasksCard] = useState(false)
+  const [headerBtns, setHeaderBtns] = useState<HeaderBtns>({
+    journal: true, quotes: true, analytics: true, settings: true,
+  })
+
   const [now, setNow] = useState(0)
   const [tabVisible, setTabVisible] = useState(true)
   const [isFull, setIsFull] = useState(false)
@@ -82,19 +95,21 @@ export default function DemoApp() {
     (projectFilter == null || i.projectId === projectFilter)
 
   const { today, daily, backlog, allTasks } = useMemo(() => {
-    const t = items.filter((i) => i.section === 'today' && pass(i))
-    const d = items.filter((i) => i.section === 'daily' && pass(i))
-    const b = items.filter((i) => i.section === 'backlog' && pass(i) && (!focusMode || i.priority === 1))
-      .sort((a, c) => tierRank(a.priority) - tierRank(c.priority) || a.id - c.id)
+    const t = features.tasks && features.today ? items.filter((i) => i.section === 'today' && pass(i)) : []
+    const d = features.tasks && features.daily ? items.filter((i) => i.section === 'daily' && pass(i)) : []
+    const b = features.tasks && features.backlog
+      ? items.filter((i) => i.section === 'backlog' && pass(i) && (!focusMode || i.priority === 1))
+        .sort((a, c) => tierRank(a.priority) - tierRank(c.priority) || a.id - c.id)
+      : []
     return { today: t, daily: d, backlog: b, allTasks: [...t, ...d, ...b] }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, hiddenPriorities, showHiddenTasks, agentFilter, projectFilter, focusMode])
+  }, [items, hiddenPriorities, showHiddenTasks, agentFilter, projectFilter, focusMode, features])
 
-  const notesVisible = useMemo(() => notes.filter((n) =>
+  const notesVisible = useMemo(() => features.notes ? notes.filter((n) =>
     (n.hidden ? showHiddenNotes : true) &&
     (projectFilter == null || n.projectId === projectFilter) &&
     (!focusMode || n.priority === 1),
-  ), [notes, showHiddenNotes, projectFilter, focusMode])
+  ) : [], [notes, showHiddenNotes, projectFilter, focusMode, features])
 
   /* ---- the live timer re-renders the demo once a second — only while a
           session is open and the tab is visible ---- */
@@ -489,18 +504,23 @@ export default function DemoApp() {
     { label: 'View Analytics', hint: 'the week on one page', run: () => setView('analytics') },
     { label: 'View Journal', hint: '##j lines by day', run: () => setView('journal') },
     { label: 'View Quotes', hint: '##q lines by day', run: () => setView('quotes') },
+    { label: view === 'settings' ? 'Close Settings' : 'Open Settings', hint: 'features · fills · header', run: () => setView(view === 'settings' ? 'list' : 'settings') },
     { label: 'Show Default View', hint: 'reset the working view', run: resetView },
     { label: focusMode ? 'Exit Focus Mode' : 'Enter Focus Mode', hint: 'P1 notes · Today · Daily · P1 backlog', run: () => setFocusMode((v) => !v) },
-    { label: showNotes ? 'Hide Notes' : 'Show Notes', hint: '', run: () => setShowNotes((v) => !v) },
-    { label: showToday ? 'Hide Today' : 'Show Today', hint: '', run: () => setShowToday((v) => !v) },
-    { label: showDaily ? 'Hide Daily' : 'Show Daily', hint: '', run: () => setShowDaily((v) => !v) },
-    { label: showBacklog ? 'Hide Backlog' : 'Show Backlog', hint: '', run: () => setShowBacklog((v) => !v) },
-    { label: showHiddenTasks ? 'Hide Hidden Tasks' : 'Show Hidden Tasks', hint: 'archived rows, inline', run: () => setShowHiddenTasks((v) => !v) },
-    { label: showHiddenNotes ? 'Hide Hidden Notes' : 'Show Hidden Notes', hint: 'archived notes, inline', run: () => setShowHiddenNotes((v) => !v) },
-    { label: agentFilter === 'agent' ? 'Show My Tasks' : 'Show Agent Tasks', hint: 'the 🤖 queue', run: () => setAgentFilter((v) => (v === 'agent' ? null : 'agent')) },
-    { label: hiddenPriorities.includes(1) ? 'Show Priority 1 Tasks' : 'Hide Priority 1 Tasks', hint: '', run: () => togglePrio(1) },
-    { label: hiddenPriorities.includes(2) ? 'Show Priority 2 Tasks' : 'Hide Priority 2 Tasks', hint: '', run: () => togglePrio(2) },
-    { label: hiddenPriorities.includes(3) ? 'Show Priority 3 Tasks' : 'Hide Priority 3 Tasks', hint: '', run: () => togglePrio(3) },
+    // the two-layers rule: a surface's Show/Hide entry exists only while the
+    // surface does — a disabled feature has nothing to toggle
+    ...(features.notes ? [{ label: showNotes ? 'Hide Notes' : 'Show Notes', hint: '', run: () => setShowNotes((v) => !v) }] : []),
+    ...(features.tasks && features.today ? [{ label: showToday ? 'Hide Today' : 'Show Today', hint: '', run: () => setShowToday((v) => !v) }] : []),
+    ...(features.tasks && features.daily ? [{ label: showDaily ? 'Hide Daily' : 'Show Daily', hint: '', run: () => setShowDaily((v) => !v) }] : []),
+    ...(features.tasks && features.backlog ? [{ label: showBacklog ? 'Hide Backlog' : 'Show Backlog', hint: '', run: () => setShowBacklog((v) => !v) }] : []),
+    ...(features.tasks ? [{ label: showHiddenTasks ? 'Hide Hidden Tasks' : 'Show Hidden Tasks', hint: 'archived rows, inline', run: () => setShowHiddenTasks((v) => !v) }] : []),
+    ...(features.notes ? [{ label: showHiddenNotes ? 'Hide Hidden Notes' : 'Show Hidden Notes', hint: 'archived notes, inline', run: () => setShowHiddenNotes((v) => !v) }] : []),
+    ...(features.tasks ? [{ label: agentFilter === 'agent' ? 'Show My Tasks' : 'Show Agent Tasks', hint: 'the 🤖 queue', run: () => setAgentFilter((v) => (v === 'agent' ? null : 'agent')) }] : []),
+    ...(features.tasks ? [
+      { label: hiddenPriorities.includes(1) ? 'Show Priority 1 Tasks' : 'Hide Priority 1 Tasks', hint: '', run: () => togglePrio(1) },
+      { label: hiddenPriorities.includes(2) ? 'Show Priority 2 Tasks' : 'Hide Priority 2 Tasks', hint: '', run: () => togglePrio(2) },
+      { label: hiddenPriorities.includes(3) ? 'Show Priority 3 Tasks' : 'Hide Priority 3 Tasks', hint: '', run: () => togglePrio(3) },
+    ] : []),
     { label: isFull ? 'Exit Fullscreen' : 'Go Fullscreen', hint: 'Esc stays a DayApp key', run: toggleFull },
     { label: 'Reset the Demo', hint: 'fresh seed, fresh times', run: reset },
   ]
@@ -508,7 +528,8 @@ export default function DemoApp() {
   return (
     <div
       ref={rootRef}
-      className={'demo-root' + (isFull ? ' full' : '') + (engaged ? ' engaged' : '')}
+      className={'demo-root' + (isFull ? ' full' : '') + (engaged ? ' engaged' : '')
+        + (notesCard ? '' : ' notes-bare') + (tasksCard ? ' sections-card' : '')}
       onPointerEnter={() => { pointerIn.current = true; setEngaged(true) }}
       onPointerLeave={() => { pointerIn.current = false; if (!focusIn.current && !isFull) setEngaged(false) }}
       onFocusCapture={() => { focusIn.current = true; setEngaged(true) }}
@@ -523,18 +544,30 @@ export default function DemoApp() {
         <div className="app-window">
           <div className="win-header">
             <div className="win-left">
-              <button className={'win-ico' + (view === 'journal' ? ' on' : '')} title={view === 'journal' ? 'Back to the list' : 'Journal'}
-                onClick={() => setView(view === 'journal' ? 'list' : 'journal')}>{view === 'journal' ? '×' : '¶'}</button>
-              <button className={'win-ico' + (view === 'quotes' ? ' on' : '')} title={view === 'quotes' ? 'Back to the list' : 'Quotes'}
-                onClick={() => setView(view === 'quotes' ? 'list' : 'quotes')}>{view === 'quotes' ? '×' : '❝'}</button>
-              <button className={'win-ico' + (view === 'analytics' ? ' on' : '')} title={view === 'analytics' ? 'Back to the list' : 'Analytics'}
-                onClick={() => setView(view === 'analytics' ? 'list' : 'analytics')}>
-                {view === 'analytics' ? '×' : (
-                  <svg className="action-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-                    <path d="M2 10V6M6 10V2M10 10V4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                  </svg>
-                )}
-              </button>
+              {headerBtns.journal && (
+                <button className={'win-ico' + (view === 'journal' ? ' on' : '')} title={view === 'journal' ? 'Back to the list' : 'Journal'}
+                  onClick={() => setView(view === 'journal' ? 'list' : 'journal')}>{view === 'journal' ? '×' : '¶'}</button>
+              )}
+              {headerBtns.quotes && (
+                <button className={'win-ico' + (view === 'quotes' ? ' on' : '')} title={view === 'quotes' ? 'Back to the list' : 'Quotes'}
+                  onClick={() => setView(view === 'quotes' ? 'list' : 'quotes')}>{view === 'quotes' ? '×' : '❝'}</button>
+              )}
+              {headerBtns.analytics && (
+                <button className={'win-ico' + (view === 'analytics' ? ' on' : '')} title={view === 'analytics' ? 'Back to the list' : 'Analytics'}
+                  onClick={() => setView(view === 'analytics' ? 'list' : 'analytics')}>
+                  {view === 'analytics' ? '×' : (
+                    <svg className="action-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+                      <path d="M2 10V6M6 10V2M10 10V4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                  )}
+                </button>
+              )}
+              {headerBtns.settings && (
+                <button className={'win-ico' + (view === 'settings' ? ' on' : '')} title={view === 'settings' ? 'Back to the list' : 'Settings'}
+                  onClick={() => setView(view === 'settings' ? 'list' : 'settings')}>
+                  {view === 'settings' ? '×' : <SettingsIcon />}
+                </button>
+              )}
             </div>
             <span className="win-title">{VIEW_TITLES[view]}</span>
             <div className="win-right">
@@ -560,13 +593,28 @@ export default function DemoApp() {
           <div className="win-body" ref={bodyRef}>
             {view === 'list' && (
               <DemoList
-                today={today} daily={daily} backlog={backlog} notes={notesVisible}
-                showNotes={showNotes} showToday={showToday} showDaily={showDaily} showBacklog={showBacklog}
+                tasksArea={features.tasks}
+                showNotes={features.notes && showNotes}
+                showToday={features.tasks && features.today && showToday}
+                showDaily={features.tasks && features.daily && showDaily}
+                showBacklog={features.tasks && features.backlog && showBacklog}
+                notes={notesVisible}
+                today={today} daily={daily} backlog={backlog}
                 projects={projects} activeSession={activeSession} nowMs={now || Date.now()}
                 totalSecsOf={(id) => sumSecs(sessions, id)}
                 sel={sel} setSel={setSel} editingId={editingId} setEditingId={setEditingId}
                 detailsId={detailsId} setDetailsId={setDetailsId} pop={pop} setPop={setPop}
                 taskCapRef={taskCapRef} noteCapRef={noteCapRef} act={act}
+              />
+            )}
+            {view === 'settings' && (
+              <DemoSettings
+                features={features}
+                onToggleFeature={(key: FeatureKey) => setFeatures((f) => ({ ...f, [key]: !f[key] }))}
+                notesCard={notesCard} tasksCard={tasksCard}
+                onSetCard={(surface, card) => surface === 'notes' ? setNotesCard(card) : setTasksCard(card)}
+                headerBtns={headerBtns}
+                onToggleHeaderBtn={(btn: HeaderBtn) => setHeaderBtns((hs) => ({ ...hs, [btn]: !hs[btn] }))}
               />
             )}
             {view === 'analytics' && (
@@ -618,4 +666,23 @@ function groupNotes(notes: Note[]): Note[][] {
   ;[...notes].sort((a, b) => tierRank(a.priority) - tierRank(b.priority) || a.id - b.id)
     .forEach((n) => g[tierRank(n.priority) - 1].push(n))
   return g
+}
+
+// The settings door's glyph, the app's cog: chunky teeth around a ring plus a
+// center hole (thin rays from a small core read as a sun). Stroke language as
+// the rest of the set.
+function SettingsIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <circle cx="8" cy="8" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="8" cy="8" r="1.1" fill="currentColor" stroke="none" />
+      <path
+        d="M8 1.4v2.2M8 12.4v2.2M1.4 8h2.2M12.4 8h2.2M3.3 3.3l1.6 1.6M11.1 11.1l1.6 1.6M12.7 3.3l-1.6 1.6M4.9 11.1l-1.6 1.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
 }
