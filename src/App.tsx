@@ -316,11 +316,13 @@ function TermsPage() {
 
       <h3>Requirements</h3>
       <p>
-        Apple Silicon Macs. The app is not signed with a paid Apple certificate. The one-line
-        install downloads it in a way that skips the security dialog. If you download the .dmg from
-        GitHub Releases instead, the first launch may ask you to allow it in System Settings →
-        Privacy &amp; Security. The source is public — check it before you trust it; that is what
-        open source is for.
+        Apple Silicon Macs, and Linux on x86_64 — the one-line install detects your platform and
+        downloads the right build. On Linux it needs the WebKit runtime (webkit2gtk-4.1); the
+        installer prints the exact command if it is missing. The macOS app is not signed with a
+        paid Apple certificate. The install downloads it in a way that skips the security dialog.
+        If you download the .dmg from GitHub Releases instead, the first launch may ask you to
+        allow it in System Settings → Privacy &amp; Security. The source is public — check it
+        before you trust it; that is what open source is for.
       </p>
 
       <h3>Mobile sync</h3>
