@@ -11,12 +11,26 @@
 #           Needs webkit2gtk-4.1 (the script names the install command if
 #           it's missing). Linux tracks the dev channel until it joins the
 #           versioned release channel.
+# Downloads are resumable: a failed or interrupted run keeps its .part file,
+# and re-running the installer continues from where it stopped.
 # Your tasks live in the app's data dir and are never touched by this script.
 
 set -eu
 
 say() { printf '%s\n' "▸ $*"; }
 die() { printf '✗ %s\n' "$*" >&2; exit 1; }
+
+# fetch_to PART_PATH URL — hardened download for flaky links:
+#   --http1.1      HTTP/2 single streams die mid-transfer with PROTOCOL_ERROR
+#                  resets on lossy connections; 1.1 recovers cleanly
+#   -C - --retry   a failed or killed attempt resumes from the last byte
+#   --speed-*      under 10 KB/s for 30s counts as a stall → retry
+fetch_to() {
+  curl -fL --http1.1 --retry 5 --retry-all-errors -C - \
+       --speed-limit 10240 --speed-time 30 \
+       --progress-bar -o "$1" "$2" \
+    || die "download failed — run this installer again, it resumes from where it stopped"
+}
 
 OS="$(uname -s)"
 ARCH="$(uname -m)"
@@ -32,8 +46,10 @@ if [ "$OS" = "Darwin" ]; then
   osascript -e 'tell application id "com.farazshah.dayapp" to quit' >/dev/null 2>&1 || true
 
   say "downloading the latest release"
-  curl -fSL --progress-bar -o "$TMP/DayApp.app.tar.gz" \
+  # The .part file lives outside TMP so a re-run resumes the old download.
+  fetch_to "${TMPDIR:-/tmp}/DayApp.app.tar.gz.part" \
     "https://github.com/faraz-35/dayapp/releases/latest/download/DayApp.app.tar.gz"
+  mv "${TMPDIR:-/tmp}/DayApp.app.tar.gz.part" "$TMP/DayApp.app.tar.gz"
 
   say "unpacking"
   tar -xzf "$TMP/DayApp.app.tar.gz" -C "$TMP"
@@ -71,12 +87,12 @@ elif [ "$OS" = "Linux" ]; then
   [ -n "$ASSET_URL" ] || die "no Linux build found — is the linux-dev release up?"
 
   say "downloading DayApp"
-  curl -fSL --progress-bar -o "$TMP/DayApp.AppImage" "$ASSET_URL"
-  chmod +x "$TMP/DayApp.AppImage"
+  mkdir -p "$HOME/.local/bin"
+  fetch_to "$HOME/.local/bin/DayApp.AppImage.part" "$ASSET_URL"
 
   say "installing to ~/.local/bin/DayApp.AppImage"
-  mkdir -p "$HOME/.local/bin"
-  mv "$TMP/DayApp.AppImage" "$HOME/.local/bin/DayApp.AppImage"
+  mv "$HOME/.local/bin/DayApp.AppImage.part" "$HOME/.local/bin/DayApp.AppImage"
+  chmod +x "$HOME/.local/bin/DayApp.AppImage"
   case ":$PATH:" in
     *":$HOME/.local/bin:"*) ;;
     *) say "note: ~/.local/bin is not on your PATH — add it, or run the file by full path" ;;
