@@ -7,13 +7,16 @@
 #   macOS — the latest release .app into /Applications. Files fetched with
 #           curl carry no Gatekeeper quarantine stamp, so the app opens
 #           without the "damaged" wall browser downloads hit on Apple Silicon.
-#   Linux — the AppImage from the rolling linux-dev release into ~/.local/bin.
+#   Linux — the AppImage from the rolling linux-dev release into ~/.local/bin,
+#           plus a launcher entry and icon so it appears in the app list.
 #           Needs webkit2gtk-4.1 (the script names the install command if
 #           it's missing). Linux tracks the dev channel until it joins the
 #           versioned release channel.
 # Downloads are resumable: a failed or interrupted run keeps its .part file,
 # and re-running the installer continues from where it stopped.
 # Your tasks live in the app's data dir and are never touched by this script.
+# Uninstall: delete ~/.local/bin/DayApp.AppImage plus the dayapp.desktop and
+# dayapp.svg files the script writes under ~/.local/share.
 
 set -eu
 
@@ -98,7 +101,28 @@ elif [ "$OS" = "Linux" ]; then
     *) say "note: ~/.local/bin is not on your PATH — add it, or run the file by full path" ;;
   esac
 
-  say "done — run it with: DayApp.AppImage"
+  # Launcher registration: app menus list .desktop entries, never PATH
+  # binaries. StartupWMClass is Dayapp — GTK uppercases the first letter of
+  # the inner binary name (dayapp → Dayapp); any other case silently fails
+  # dock/taskbar matching.
+  say "registering with the app launcher"
+  ICON_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
+  mkdir -p "$ICON_DIR" "$HOME/.local/share/applications"
+  fetch_to "$ICON_DIR/dayapp.svg.part" "https://getdayapp.vercel.app/dayapp.svg"
+  mv "$ICON_DIR/dayapp.svg.part" "$ICON_DIR/dayapp.svg"
+  cat > "$HOME/.local/share/applications/com.farazshah.dayapp.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=DayApp
+Comment=Task list with notes and a journal
+Exec="$HOME/.local/bin/DayApp.AppImage"
+Terminal=false
+StartupWMClass=Dayapp
+Categories=Utility;Office;
+Icon=dayapp
+EOF
+
+  say "done — DayApp is in your app launcher (or run it as: DayApp.AppImage)"
 
 else
   die "unsupported platform: $OS (DayApp is macOS and Linux)"
