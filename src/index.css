@@ -1415,9 +1415,10 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 }
 
 /* ---- settings page (⌘P → Open Settings, or the gear) ------------------------ */
-/* The app's SettingsView language at demo scope: analytics cards of rows,
-   hover tint, the On/Off state at the right, Card/Bare pills. The site has
-   no global button reset, so .settings-main carries the full bare treatment. */
+/* The app's SettingsView language at demo scope: group cards, real switches,
+   the Card/Bare seg with its fill swatch, counts in the card titles, and
+   section rows that go inert while Tasks is off. The site has no global
+   button reset, so .set-seg button carries the bare treatment. */
 
 .settings {
   padding: 4px 4px 12px;
@@ -1425,51 +1426,107 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   flex-direction: column;
   gap: 12px;
 }
-.settings-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.set-count {
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
 }
-.settings-row {
+.set-rows { display: flex; flex-direction: column; gap: 2px; }
+.set-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 4px;
+  gap: 12px;
+  padding: 7px 8px;
   border-radius: 6px;
-}
-.settings-row:hover { background: var(--bg-hover); }
-.settings-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 6px 4px;
-  text-align: left;
-  background: none;
-  border: none;
-  font: inherit;
-  color: inherit;
   cursor: pointer;
+  transition: background 0.08s ease;
 }
-.settings-name { font-size: 13px; }
-.settings-hint {
-  flex: 1;
-  font-size: 12px;
+.set-row:hover { background: var(--bg-hover); }
+.set-row-text { flex: 1; min-width: 0; }
+.set-name { display: block; font-size: 13px; }
+.set-hint {
+  display: block;
+  font-size: 11.5px;
   color: var(--text-faint);
+  margin-top: 1px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.settings-state {
+/* A dependent row whose gate feature is off: inert, and the hint says why. */
+.dep { opacity: 0.38; pointer-events: none; }
+
+/* The switch: track + knob, accent when on. The knob stays white on every
+   theme — it sits on the accent, which is saturated in every theme. */
+.set-sw {
+  width: 30px;
+  height: 17px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  position: relative;
+  display: inline-block;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.set-sw::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.set-sw.on { background: var(--accent); border-color: transparent; }
+.set-sw.on::after { transform: translateX(13px); background: #fff; }
+
+/* Segmented control — the exclusive Card/Bare choice in one hairline box. */
+.set-seg {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.set-seg button {
+  padding: 3px 10px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-faint);
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.08s ease, background 0.08s ease;
+}
+.set-seg button + button { border-left: 1px solid var(--border); }
+.set-seg button:hover { color: var(--text); background: var(--bg-hover); }
+.set-seg button.on { color: var(--accent); background: rgba(var(--accent-rgb, 123, 140, 255), 0.08); }
+
+/* The Card/Bare swatch: a well of the app background — Card fills it with
+   the soft chip, Bare shows a dashed empty frame. Show, don't tell. */
+.set-swatch {
+  width: 26px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  position: relative;
   flex-shrink: 0;
 }
-.settings-state.on { color: var(--accent); }
+.set-swatch::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 2px;
+}
+.set-swatch.filled::after { background: var(--bg-soft); border: 1px solid var(--border); }
+.set-swatch.empty::after { border: 1px dashed var(--text-faint); opacity: 0.5; }
 
 /* UI option (Settings → UI): the resting fills, the app's two states —
    notes read Card (the soft fill) by default, tasks read Bare; each surface

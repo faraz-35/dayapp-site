@@ -69,7 +69,9 @@ export default function DemoApp() {
   const [notesCard, setNotesCard] = useState(true)
   const [tasksCard, setTasksCard] = useState(false)
   const [headerBtns, setHeaderBtns] = useState<HeaderBtns>({
-    journal: true, quotes: true, analytics: true, settings: true,
+    // Journal and Quotes default off — the written-entry pages are opt-in
+    // chrome, same default as the app.
+    journal: false, quotes: false, analytics: true, settings: true,
   })
 
   const [now, setNow] = useState(0)
