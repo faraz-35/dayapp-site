@@ -47,6 +47,14 @@ function CheckIcon() {
   )
 }
 
+function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <polyline points="4.5 6.25 8 9.75 11.5 6.25" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 // A terminal block with a corner copy button. The button copies `copy` (the
 // raw commands — display lines may carry comments the clipboard shouldn't),
 // flips to a check for a beat, and owns its own state so several boxes on
@@ -90,7 +98,7 @@ function InstallLine() {
         <div className="tline"><span className="tp">{win ? '>' : '$'}</span> {cmd}</div>
       </CodeBox>
       <div className="install-flip">
-        <span>{win ? 'Windows' : 'macOS, detected from your browser'}</span>
+        <span>{win ? 'Windows' : 'macOS'}</span>
         <button onClick={() => setWin(!win)}>
           {win ? 'show the Mac command' : 'show the Windows command'}
         </button>
@@ -374,6 +382,7 @@ function TermsPage() {
 
 export default function App() {
   const [mediaTab, setMediaTab] = useState<MediaTab>('notes')
+  const [allFeatures, setAllFeatures] = useState(false)
   const route = useRoute()
 
   useEffect(() => {
@@ -473,8 +482,8 @@ export default function App() {
 
       {/* ---------- features ---------- */}
       <Section id="inside" title="What's inside">
-        <div className="feature-grid">
-          {FEATURES.map((f) => (
+        <div className={allFeatures ? 'feature-grid' : 'feature-grid feature-cut'}>
+          {(allFeatures ? FEATURES : FEATURES.slice(0, 5)).map((f) => (
             <div className="feature-card" key={f.label}>
               <div className="feature-label">{f.label}</div>
               <div className="feature-title">{f.title}</div>
@@ -482,10 +491,18 @@ export default function App() {
             </div>
           ))}
         </div>
+        <button
+          className={allFeatures ? 'feature-more open' : 'feature-more'}
+          onClick={() => setAllFeatures(!allFeatures)}
+          aria-expanded={allFeatures}
+          aria-label={allFeatures ? 'Show fewer features' : 'Show all features'}
+        >
+          <ChevronIcon />
+        </button>
       </Section>
 
       {/* ---------- keyboard ---------- */}
-      <Section id="keyboard" title="Keyboard-first">
+      <Section id="keyboard" title="Keybindings">
         <div className="kb-card">
           {KEYS.map(([keys, what]) => (
             <div className="kb-row" key={keys}>
