@@ -7,7 +7,7 @@
    computed from the eleven shades and never stored. */
 
 :root {
-  --bg: #0e0f11;
+  --bg: #0a0b0c;
   --bg-soft: #121316;
   --bg-elev: #16181c;
   --bg-hover: #1c1f24;
@@ -19,11 +19,11 @@
   --done: #3a3f48;
   --danger: #e5484d;
   --accent-rgb: 123, 140, 255;
-  --bg-rgb: 14, 15, 17;
+  --bg-rgb: 10, 11, 12;
   --on-accent: #0e0f11;
   --scrim: rgba(0, 0, 0, 0.4);
   --track: rgba(255, 255, 255, 0.05);
-  --terminal: #0b0c0e;
+  --terminal: #08090a;
   --border-strong: #2e323b;
   --project-l: 68%;
   --shadow-win: 0 24px 70px rgba(0, 0, 0, 0.5);
@@ -110,17 +110,6 @@ h2 {
 }
 
 /* the one decorative move: a faint accent glow behind the wordmark */
-.hero::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -140px;
-  width: 900px;
-  height: 480px;
-  transform: translateX(-50%);
-  background: radial-gradient(closest-side, rgba(var(--accent-rgb), 0.09), transparent);
-  pointer-events: none;
-}
 
 .hero-inner {
   position: relative;

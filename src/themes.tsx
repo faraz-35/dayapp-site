@@ -36,7 +36,7 @@ const DARK: Theme = {
   id: 'dark',
   name: 'Dark',
   colors: {
-    bg: '#0e0f11',
+    bg: '#0a0b0c',
     bgSoft: '#121316',
     bgElev: '#16181c',
     bgHover: '#1c1f24',
@@ -166,7 +166,7 @@ export function applyTheme(theme: Theme, root: HTMLElement = document.documentEl
   r.setProperty('--track', light ? 'rgba(22, 25, 31, 0.08)' : 'rgba(255, 255, 255, 0.05)')
   // the light terminal is the ladder's own elevated white — a tinted grey
   // (the old #eef0f3) reads bluish against the neutral page
-  r.setProperty('--terminal', light ? '#ffffff' : '#0b0c0e')
+  r.setProperty('--terminal', light ? '#ffffff' : '#08090a')
   r.setProperty('--border-strong', light ? '#c4c7cf' : '#2e323b')
   r.setProperty('--project-l', light ? '40%' : '68%')
   r.setProperty(
