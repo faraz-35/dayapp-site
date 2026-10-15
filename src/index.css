@@ -1662,13 +1662,14 @@ h2 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 44px 40px;
-  position: relative;
 }
 
-/* Collapsed to the first five cards — the bottom row fades into the page so
-   the cut reads as "more below", and the round button under the grid opens
-   the rest (chevron flips to close). */
-.feature-cut::after {
+/* The keybindings list opens with the first five rows — the cut row fades
+   into the page so the trim reads as "more below", and the round button
+   under the list opens the rest (chevron flips to close). Neutral chrome:
+   bg-hover fill, dim glyph — no accent, on both themes. */
+.kb-card { position: relative; }
+.kb-cut::after {
   content: '';
   position: absolute;
   left: 0;
@@ -1679,7 +1680,7 @@ h2 {
   pointer-events: none;
 }
 
-.feature-more {
+.kb-more {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1689,13 +1690,13 @@ h2 {
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  background: rgba(var(--accent-rgb), 0.14);
-  color: var(--accent);
-  transition: background 0.08s ease;
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  transition: background 0.08s ease, color 0.08s ease;
 }
-.feature-more:hover { background: rgba(var(--accent-rgb), 0.24); }
-.feature-more svg { transition: transform 0.12s ease; }
-.feature-more.open svg { transform: rotate(180deg); }
+.kb-more:hover { background: var(--border); color: var(--text); }
+.kb-more svg { transition: transform 0.12s ease; }
+.kb-more.open svg { transform: rotate(180deg); }
 
 .feature-card {
   border-top: 1px solid var(--border);

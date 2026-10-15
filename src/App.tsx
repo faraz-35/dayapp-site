@@ -382,7 +382,7 @@ function TermsPage() {
 
 export default function App() {
   const [mediaTab, setMediaTab] = useState<MediaTab>('notes')
-  const [allFeatures, setAllFeatures] = useState(false)
+  const [allKeys, setAllKeys] = useState(false)
   const route = useRoute()
 
   useEffect(() => {
@@ -481,9 +481,9 @@ export default function App() {
       </Section>
 
       {/* ---------- features ---------- */}
-      <Section id="inside" title="What's inside">
-        <div className={allFeatures ? 'feature-grid' : 'feature-grid feature-cut'}>
-          {(allFeatures ? FEATURES : FEATURES.slice(0, 5)).map((f) => (
+      <Section id="inside" title="Features">
+        <div className="feature-grid">
+          {FEATURES.map((f) => (
             <div className="feature-card" key={f.label}>
               <div className="feature-label">{f.label}</div>
               <div className="feature-title">{f.title}</div>
@@ -491,26 +491,26 @@ export default function App() {
             </div>
           ))}
         </div>
-        <button
-          className={allFeatures ? 'feature-more open' : 'feature-more'}
-          onClick={() => setAllFeatures(!allFeatures)}
-          aria-expanded={allFeatures}
-          aria-label={allFeatures ? 'Show fewer features' : 'Show all features'}
-        >
-          <ChevronIcon />
-        </button>
       </Section>
 
       {/* ---------- keyboard ---------- */}
       <Section id="keyboard" title="Keybindings">
-        <div className="kb-card">
-          {KEYS.map(([keys, what]) => (
-            <div className="kb-row" key={keys}>
+        <div className={allKeys ? 'kb-card' : 'kb-card kb-cut'}>
+          {KEYS.map(([keys, what], i) => (
+            <div className="kb-row" key={keys} hidden={!allKeys && i >= 5}>
               <span className="kb-keys">{keys}</span>
               <span className="kb-what">{what}</span>
             </div>
           ))}
         </div>
+        <button
+          className={allKeys ? 'kb-more open' : 'kb-more'}
+          onClick={() => setAllKeys(!allKeys)}
+          aria-expanded={allKeys}
+          aria-label={allKeys ? 'Show fewer keybindings' : 'Show all keybindings'}
+        >
+          <ChevronIcon />
+        </button>
       </Section>
 
       {/* ---------- open source ---------- */}
