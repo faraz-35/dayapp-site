@@ -73,9 +73,9 @@ function monthGrid(counts: Map<string, number>, picked: string | null, onPick: (
       </div>
       <div className="hm-legend">
         less <i style={{ background: 'var(--bg-hover)' }} />
-        <i style={{ background: 'rgba(123,140,255,0.24)' }} />
-        <i style={{ background: 'rgba(123,140,255,0.42)' }} />
-        <i style={{ background: 'rgba(123,140,255,0.64)' }} />
+        <i style={{ background: 'rgba(var(--accent-rgb), 0.24)' }} />
+        <i style={{ background: 'rgba(var(--accent-rgb), 0.42)' }} />
+        <i style={{ background: 'rgba(var(--accent-rgb), 0.64)' }} />
         <i style={{ background: 'var(--accent)' }} /> more
       </div>
     </div>
@@ -250,7 +250,7 @@ export default function DemoAnalytics({ items, actions, sessions, projects }: {
           <div className="an-card-title"><span>Priority</span></div>
           <div className="an-segbar">
             {splits.prio.map((n, i) => n > 0 && (
-              <span key={i} className="seg" style={{ width: `${(n / splits.total) * 100}%`, background: ['var(--accent)', 'rgba(123,140,255,0.64)', 'rgba(123,140,255,0.42)', 'rgba(123,140,255,0.24)'][i] }} />
+              <span key={i} className="seg" style={{ width: `${(n / splits.total) * 100}%`, background: ['var(--accent)', 'rgba(var(--accent-rgb), 0.64)', 'rgba(var(--accent-rgb), 0.42)', 'rgba(var(--accent-rgb), 0.24)'][i] }} />
             ))}
           </div>
           <div className="an-seg-legend">

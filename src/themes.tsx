@@ -166,6 +166,7 @@ export function applyTheme(theme: Theme, root: HTMLElement = document.documentEl
   r.setProperty('--track', light ? 'rgba(22, 25, 31, 0.08)' : 'rgba(255, 255, 255, 0.05)')
   r.setProperty('--terminal', light ? '#eef0f3' : '#0b0c0e')
   r.setProperty('--border-strong', light ? '#c4c7cf' : '#2e323b')
+  r.setProperty('--project-l', light ? '40%' : '68%')
   r.setProperty(
     '--shadow-win',
     light ? '0 24px 70px rgba(25, 30, 40, 0.16)' : '0 24px 70px rgba(0, 0, 0, 0.5)',
@@ -266,9 +267,9 @@ export function MoonIcon() {
 export function SunIcon() {
   return (
     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-      <circle cx="8" cy="8" r="2.7" fill="none" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="8" cy="8" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.7" />
       <path
-        d="M8 1.7v1.8M8 12.5v1.8M1.7 8h1.8M12.5 8h1.8M3.6 3.6l1.3 1.3M11.1 11.1l1.3 1.3M12.4 3.6l-1.3 1.3M4.9 11.1l-1.3 1.3"
+        d="M8 1.6v1.4M8 13v1.4M1.6 8h1.4M13 8h1.4M3.5 3.5l1 1M11.5 3.5l1 1M3.5 12.5l1-1M11.5 12.5l1-1"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.7"

@@ -284,8 +284,10 @@ function resolveProject(name: string, projects: Project[]): number | null {
 // The one token matcher — colors exactly what the parsers strip.
 /* ---- derived facts --------------------------------------------------------- */
 
+// Deterministic hue per project id — the lightness rides the theme's
+// --project-l (applyTheme derives it), so labels hold contrast on any skin.
 export function projectColor(id: number): string {
-  return `hsl(${(id * 83) % 360} 55% 68%)`
+  return `hsl(${(id * 83) % 360} 55% var(--project-l, 68%))`
 }
 
 export const clipProject = (name: string) => (name.length > 6 ? `${name.slice(0, 6)}…` : name)

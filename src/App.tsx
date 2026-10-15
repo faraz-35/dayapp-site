@@ -18,7 +18,11 @@ function DemoSkeleton() {
 }
 
 const GITHUB = 'https://github.com/faraz-35/dayapp'
-const INSTALL_CMD = 'curl -fsSL https://getdayapp.vercel.app/install.sh | sh'
+const INSTALL_CMD_MAC = 'curl -fsSL https://getdayapp.vercel.app/install.sh | sh'
+const INSTALL_CMD_WIN = 'irm https://getdayapp.vercel.app/install.ps1 | iex'
+// The one-liner speaks the visitor's shell — curl|sh on macOS/Linux,
+// irm|iex (PowerShell) on Windows — detected once from the UA.
+const DETECTED_WIN = /windows/i.test(navigator.userAgent)
 const BUILD_CMD = [
   'git clone https://github.com/faraz-35/dayapp.git',
   'cd dayapp && npm install',
@@ -71,6 +75,27 @@ function CodeBox({ copy, snug, children }: {
         {copied ? <CheckIcon /> : <CopyIcon />}
       </button>
     </div>
+  )
+}
+
+// The hero's install line: the detected platform's command, with a faint
+// link underneath to flip to the other shell's command (the page gets
+// forwarded to friends on the other system).
+function InstallLine() {
+  const [win, setWin] = useState(DETECTED_WIN)
+  const cmd = win ? INSTALL_CMD_WIN : INSTALL_CMD_MAC
+  return (
+    <>
+      <CodeBox snug copy={cmd}>
+        <div className="tline"><span className="tp">{win ? '>' : '$'}</span> {cmd}</div>
+      </CodeBox>
+      <div className="install-flip">
+        <span>{win ? 'Windows' : 'macOS, detected from your browser'}</span>
+        <button onClick={() => setWin(!win)}>
+          {win ? 'show the Mac command' : 'show the Windows command'}
+        </button>
+      </div>
+    </>
   )
 }
 
