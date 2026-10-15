@@ -173,7 +173,7 @@ h2 {
   font-size: 12.5px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--text-faint);
+  color: var(--text);
 }
 
 .btn-ghost {
