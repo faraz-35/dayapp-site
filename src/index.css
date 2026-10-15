@@ -225,6 +225,12 @@ h2 {
   align-items: flex-start;
 }
 
+/* the window wears its own theme (applyTheme scopes the ladder here), so it
+   must also paint its own text: without this, every element that inherits
+   color takes the page body's — the page theme's — and dark text lands on
+   dark demo whenever the two themes diverge */
+.demo-root { color: var(--text); }
+
 .app-window {
   width: 100%;
   background: var(--bg);
