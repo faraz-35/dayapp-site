@@ -414,9 +414,7 @@ export default function App() {
           <div className="fx d2 hero-line">Notes · Tasks · Journal · Timers · Analytics</div>
           <div className="fx d2 hero-install">
             <div className="tlabel">Install with one simple command</div>
-            <CodeBox snug copy={INSTALL_CMD}>
-              <div className="tline"><span className="tp">$</span> {INSTALL_CMD}</div>
-            </CodeBox>
+            <InstallLine />
           </div>
         </div>
       </header>

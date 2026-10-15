@@ -1790,6 +1790,23 @@ h2 {
 .copy-btn:hover { background: var(--bg-hover); }
 .copy-btn.copied { color: var(--accent); }
 
+/* The install line's platform flip — a faint caption + accent link under the
+   hero's command box, switching the one-liner between the two shells. */
+.install-flip {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+.install-flip button {
+  border: none;
+  background: none;
+  padding: 0 0 0 6px;
+  cursor: pointer;
+  color: var(--accent);
+  font: inherit;
+}
+.install-flip button:hover { text-decoration: underline; }
+
 /* ---- site nav -------------------------------------------------------------- */
 
 .site-nav {
