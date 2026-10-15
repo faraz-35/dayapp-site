@@ -164,7 +164,9 @@ export function applyTheme(theme: Theme, root: HTMLElement = document.documentEl
   const light = themeIsLight(theme)
   r.setProperty('--scrim', light ? 'rgba(15, 18, 24, 0.3)' : 'rgba(0, 0, 0, 0.4)')
   r.setProperty('--track', light ? 'rgba(22, 25, 31, 0.08)' : 'rgba(255, 255, 255, 0.05)')
-  r.setProperty('--terminal', light ? '#eef0f3' : '#0b0c0e')
+  // the light terminal is the ladder's own elevated white — a tinted grey
+  // (the old #eef0f3) reads bluish against the neutral page
+  r.setProperty('--terminal', light ? '#ffffff' : '#0b0c0e')
   r.setProperty('--border-strong', light ? '#c4c7cf' : '#2e323b')
   r.setProperty('--project-l', light ? '40%' : '68%')
   r.setProperty(
