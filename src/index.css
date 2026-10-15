@@ -1669,6 +1669,8 @@ h2 {
    under the list opens the rest (chevron flips to close). Neutral chrome:
    bg-hover fill, dim glyph — no accent, on both themes. */
 .kb-card { position: relative; }
+/* author display beats the hidden attribute's UA none — restate it */
+.kb-row[hidden] { display: none; }
 .kb-cut::after {
   content: '';
   position: absolute;
