@@ -1,6 +1,10 @@
 /* DayApp's own tokens, verbatim — the site is the product's aesthetic applied
-   to a page. One accent, always dark, dense rows, uppercase labels, serif
-   italic for the brand's quiet moments. */
+   to a page. One accent, dense rows, uppercase labels, serif italic for the
+   brand's quiet moments. The ladder below is Dark (the shipped look) and the
+   static fallback for first paint; the active theme — Dark, Light, Nord,
+   Rosé Pine — is written onto <html> at runtime by applyTheme (themes.ts),
+   derived values (the rgb triplets, scrims, shadows, terminal fill)
+   computed from the eleven shades and never stored. */
 
 :root {
   --bg: #0e0f11;
@@ -14,6 +18,16 @@
   --accent: #7b8cff;
   --done: #3a3f48;
   --danger: #e5484d;
+  --accent-rgb: 123, 140, 255;
+  --bg-rgb: 14, 15, 17;
+  --on-accent: #0e0f11;
+  --scrim: rgba(0, 0, 0, 0.4);
+  --track: rgba(255, 255, 255, 0.05);
+  --terminal: #0b0c0e;
+  --border-strong: #2e323b;
+  --shadow-win: 0 24px 70px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.6);
+  --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.5);
   --serif: ui-serif, "New York", Didot, Georgia, serif;
   --sans: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text", system-ui, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -35,7 +49,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-::selection { background: rgba(123, 140, 255, 0.35); }
+::selection { background: rgba(var(--accent-rgb), 0.35); }
 
 a { color: inherit; }
 
@@ -103,7 +117,7 @@ h2 {
   width: 900px;
   height: 480px;
   transform: translateX(-50%);
-  background: radial-gradient(closest-side, rgba(123, 140, 255, 0.09), transparent);
+  background: radial-gradient(closest-side, rgba(var(--accent-rgb), 0.09), transparent);
   pointer-events: none;
 }
 
@@ -161,22 +175,6 @@ h2 {
   color: var(--text-faint);
 }
 
-.btn-primary {
-  display: inline-block;
-  background: var(--accent);
-  color: #0e0f11;
-  font-weight: 600;
-  font-size: 14px;
-  border-radius: 8px;
-  padding: 11px 20px;
-  text-decoration: none;
-  transition: filter 0.1s ease;
-}
-
-.btn-primary:hover { filter: brightness(1.1); }
-
-button.btn-primary { font: inherit; border: 0; cursor: pointer; }
-
 .btn-ghost {
   display: inline-block;
   border: 1px solid var(--border);
@@ -189,7 +187,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   transition: background 0.1s ease, border-color 0.1s ease;
 }
 
-.btn-ghost:hover { background: var(--bg-hover); border-color: #2e323b; }
+.btn-ghost:hover { background: var(--bg-hover); border-color: var(--border-strong); }
 
 /* hero entrance — quiet, quick */
 .fx { animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
@@ -232,7 +230,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-win);
   font-size: 13px;
 }
 
@@ -290,8 +288,8 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   animation: timer-pulse 1.4s ease-in-out infinite;
 }
 @keyframes timer-pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(123, 140, 255, 0.45); }
-  50%      { opacity: 0.55; box-shadow: 0 0 0 3px rgba(123, 140, 255, 0); }
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.45); }
+  50%      { opacity: 0.55; box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0); }
 }
 .timer-chip-elapsed {
   font-size: 12px;
@@ -487,7 +485,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   position: absolute;
   top: 0;
   left: 0;
-  background: rgba(123, 140, 255, 0.3);
+  background: rgba(var(--accent-rgb), 0.3);
   border-radius: 1px;
 }
 .tok-mirror .priority-bars { vertical-align: middle; }
@@ -673,8 +671,8 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   padding: 1px 6px;
   border-radius: 8px;
   color: var(--accent);
-  background: rgba(123, 140, 255, 0.1);
-  border: 1px solid rgba(123, 140, 255, 0.25);
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
   white-space: nowrap;
 }
 :is(.item:hover, .item.selected) .reminder-chip { visibility: hidden; }
@@ -852,7 +850,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-menu);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1067,9 +1065,9 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   cursor: pointer;
 }
 .cal-cell.blank { background: transparent; cursor: default; }
-.cal-cell.l1 { background: rgba(123, 140, 255, 0.24); }
-.cal-cell.l2 { background: rgba(123, 140, 255, 0.42); }
-.cal-cell.l3 { background: rgba(123, 140, 255, 0.64); }
+.cal-cell.l1 { background: rgba(var(--accent-rgb), 0.24); }
+.cal-cell.l2 { background: rgba(var(--accent-rgb), 0.42); }
+.cal-cell.l3 { background: rgba(var(--accent-rgb), 0.64); }
 .cal-cell.l4 { background: var(--accent); }
 .cal-cell.future { background: transparent; cursor: default; }
 .cal-cell .n {
@@ -1134,7 +1132,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   flex: 1;
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--track);
   overflow: hidden;
 }
 .an-row .fill {
@@ -1157,7 +1155,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   height: 8px;
   border-radius: 4px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--track);
   margin: 2px 0 12px;
 }
 .an-segbar .seg { height: 100%; }
@@ -1353,7 +1351,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 .palette-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--scrim);
   z-index: 100;
   display: flex;
   align-items: flex-start;
@@ -1368,7 +1366,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow-pop);
   overflow: hidden;
 }
 .palette-input {
@@ -1506,7 +1504,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 }
 .set-seg button + button { border-left: 1px solid var(--border); }
 .set-seg button:hover { color: var(--text); background: var(--bg-hover); }
-.set-seg button.on { color: var(--accent); background: rgba(var(--accent-rgb, 123, 140, 255), 0.08); }
+.set-seg button.on { color: var(--accent); background: rgba(var(--accent-rgb), 0.08); }
 
 /* The Card/Bare swatch: a well of the app background — Card fills it with
    the soft chip, Bare shows a dashed empty frame. Show, don't tell. */
@@ -1527,6 +1525,54 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 }
 .set-swatch.filled::after { background: var(--bg-soft); border: 1px solid var(--border); }
 .set-swatch.empty::after { border: 1px dashed var(--text-faint); opacity: 0.5; }
+
+/* The theme ladder — the app's Appearance cards: an eleven-shade strip (the
+   editor's order) over the name, Active on the live one, click applies. */
+.set-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+  margin: 6px 8px 2px;
+}
+.set-theme-card {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  text-align: left;
+  padding: 8px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: background 0.08s ease, border-color 0.08s ease;
+}
+.set-theme-card:hover { background: var(--bg-hover); }
+.set-theme-card.on { border-color: rgba(var(--accent-rgb), 0.55); }
+.set-strip {
+  display: flex;
+  height: 14px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.set-strip i { flex: 1; }
+.set-theme-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.set-theme-card.on .set-theme-foot { color: var(--text); }
+.set-theme-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.set-state {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+.set-state.on { color: var(--accent); }
 
 /* UI option (Settings → UI): the resting fills, the app's two states —
    notes read Card (the soft fill) by default, tasks read Bare; each surface
@@ -1562,8 +1608,8 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 
 .media-tab.active {
   color: var(--accent);
-  border-color: rgba(123, 140, 255, 0.5);
-  background: rgba(123, 140, 255, 0.08);
+  border-color: rgba(var(--accent-rgb), 0.5);
+  background: rgba(var(--accent-rgb), 0.08);
 }
 
 .media-caption {
@@ -1683,7 +1729,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
 /* ---- open source ---------------------------------------------------------- */
 
 .terminal {
-  background: #0b0c0e;
+  background: var(--terminal);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 18px 20px;
@@ -1751,7 +1797,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   left: 0;
   right: 0;
   z-index: 50;
-  background: rgba(14, 15, 17, 0.78);
+  background: rgba(var(--bg-rgb), 0.78);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
@@ -1773,7 +1819,7 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   color: var(--text);
   text-decoration: none;
 }
-.site-nav-links { display: flex; gap: 22px; }
+.site-nav-links { display: flex; gap: 22px; align-items: center; }
 .site-nav-links a {
   color: var(--text-dim);
   text-decoration: none;
@@ -1781,6 +1827,47 @@ button.btn-primary { font: inherit; border: 0; cursor: pointer; }
   transition: color 0.08s ease;
 }
 .site-nav-links a:hover { color: var(--text); }
+
+/* the nav's theme toggle — the window icon language: bare glyph at rest,
+   faint tint on hover; the moon/sun reads the active theme's mode */
+.nav-btn {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.1s ease, background 0.1s ease;
+}
+.nav-btn:hover { color: var(--text); background: var(--bg-hover); }
+.nav-btn .theme-idx {
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  font-size: 8px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* the demo window's theme-cycle subscript (the app's .theme-idx): the slot
+   within the mode's own ladder, only while the mode holds more than one */
+.win-ico.theme-cycle { position: relative; }
+.win-ico.theme-cycle .theme-idx {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  font-size: 8px;
+  line-height: 1;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.win-ico.theme-cycle:hover .theme-idx { color: var(--text); }
 
 /* Anchored sections stop below the fixed nav; the brand link lands on the
    hero itself. */

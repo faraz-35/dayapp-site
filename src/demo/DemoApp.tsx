@@ -12,6 +12,7 @@ import {
   type ActionRow, type ActionVerb, type EntryRow, type HideDuration, type Item,
   type Note, type Priority, type Project, type Seed,
 } from './model'
+import { MoonIcon, SunIcon, THEMES, activateTheme, themeIsLight, themeModeSlot, useTheme } from '../themes'
 import DemoList, { type CaptureHandle, type Pop, type Sel } from './DemoList'
 import DemoAnalytics from './DemoAnalytics'
 import DemoEntries from './DemoEntries'
@@ -27,6 +28,14 @@ const VIEW_TITLES: Record<View, string> = {
 const ADDRESS_KEYS = new Set(['n', 't', 'd', 'b'])
 
 export default function DemoApp() {
+  const theme = useTheme()
+  const themeSlot = themeModeSlot(theme, THEMES)
+  // The window's theme button walks the whole ladder — the app's header
+  // behavior; the Settings page stays the direct door.
+  const cycleTheme = () => {
+    const i = THEMES.findIndex((t) => t.id === theme.id)
+    activateTheme(THEMES[(i + 1) % THEMES.length].id)
+  }
   const [seed0] = useState<Seed>(makeSeed)
   const [items, setItems] = useState(seed0.items)
   const [notes, setNotes] = useState(seed0.notes)
@@ -71,7 +80,7 @@ export default function DemoApp() {
   const [headerBtns, setHeaderBtns] = useState<HeaderBtns>({
     // Journal and Quotes default off — the written-entry pages are opt-in
     // chrome, same default as the app.
-    journal: false, quotes: false, analytics: true, settings: true,
+    journal: false, quotes: false, analytics: true, settings: true, theme: true,
   })
 
   const [now, setNow] = useState(0)
@@ -561,6 +570,15 @@ export default function DemoApp() {
                     <svg className="action-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
                       <path d="M2 10V6M6 10V2M10 10V4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                     </svg>
+                  )}
+                </button>
+              )}
+              {headerBtns.theme && (
+                <button className="win-ico theme-cycle" title={`Theme: ${theme.name}`}
+                  aria-label="Cycle theme" onClick={cycleTheme}>
+                  {themeIsLight(theme) ? <SunIcon /> : <MoonIcon />}
+                  {themeSlot.count > 1 && (
+                    <span className="theme-idx" aria-hidden="true">{themeSlot.index}</span>
                   )}
                 </button>
               )}

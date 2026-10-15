@@ -1,13 +1,16 @@
 /* The demo's settings page (⌘P → Open Settings, or the gear): what exists at
-   all (Features), the resting fill behind notes and rows (Interface), and
-   which icon buttons mount in the window header (Header). The app's
-   SettingsView language — group cards, real switches, the Card/Bare seg with
-   its fill swatch, section rows that go inert while Tasks is off — at demo
-   scope. Mouse-first like the analytics page: no grammar wiring, free-mode
-   scrolling works. */
+   all (Features), which icon buttons mount in the window header (Header),
+   and the look (Appearance — the theme ladder over the two resting fills).
+   The app's SettingsView language — group cards, real switches, theme
+   ladder cards, counts in titles, section rows that go inert while Tasks is
+   off — at demo scope. Themes write through the site's one theme store, so
+   a pick re-skins the whole page, not just the window. Mouse-first like the
+   analytics page: no grammar wiring, free-mode scrolling works. */
+
+import { THEMES, activateTheme, useTheme, type ThemeColors } from '../themes'
 
 export type FeatureKey = 'tasks' | 'today' | 'daily' | 'backlog' | 'notes'
-export type HeaderBtn = 'journal' | 'quotes' | 'analytics' | 'settings'
+export type HeaderBtn = 'journal' | 'quotes' | 'analytics' | 'settings' | 'theme'
 
 export type Features = Record<FeatureKey, boolean>
 export type HeaderBtns = Record<HeaderBtn, boolean>
@@ -24,7 +27,14 @@ const HEADER_BUTTONS: { key: HeaderBtn; label: string; hint: string }[] = [
   { key: 'journal', label: 'Journal', hint: 'the prose icon' },
   { key: 'quotes', label: 'Quotes', hint: 'the quote icon' },
   { key: 'analytics', label: 'Analytics', hint: 'the chart icon' },
+  { key: 'theme', label: 'Theme cycle', hint: 'the moon/sun icon' },
   { key: 'settings', label: 'Settings', hint: 'the gear icon' },
+]
+
+// The strip's shade order — the app's editor ladder, so a theme reads at a
+// glance the same way here as in the app.
+const COLOR_KEYS: (keyof ThemeColors)[] = [
+  'bg', 'bgElev', 'bgSoft', 'bgHover', 'border', 'text', 'textDim', 'textFaint', 'accent', 'done', 'danger',
 ]
 
 function Switch({ on }: { on: boolean }) {
@@ -68,6 +78,7 @@ export default function DemoSettings({ features, onToggleFeature, notesCard, tas
   headerBtns: HeaderBtns
   onToggleHeaderBtn(btn: HeaderBtn): void
 }) {
+  const theme = useTheme()
   const onCount = FEATURES.filter((f) => features[f.key]).length
   const shown = HEADER_BUTTONS.filter((b) => headerBtns[b.key]).length
   const tasksOff = !features.tasks
@@ -94,7 +105,28 @@ export default function DemoSettings({ features, onToggleFeature, notesCard, tas
       </div>
 
       <div className="an-card">
-        <div className="an-card-title">Interface</div>
+        <div className="an-card-title">
+          Header
+          <span className="set-count">{shown} of {HEADER_BUTTONS.length} shown</span>
+        </div>
+        <div className="set-rows">
+          {HEADER_BUTTONS.map(({ key, label, hint }) => (
+            <ToggleRow
+              key={key}
+              label={label}
+              hint={hint}
+              on={headerBtns[key]}
+              onToggle={() => onToggleHeaderBtn(key)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="an-card">
+        <div className="an-card-title">
+          Appearance
+          <span className="set-count">{THEMES.length} themes</span>
+        </div>
         <div className="set-rows">
           {([['notes', 'Notes background', 'the fill behind each note'],
              ['tasks', 'Tasks background', 'the fill behind each row']] as const).map(
@@ -116,23 +148,29 @@ export default function DemoSettings({ features, onToggleFeature, notesCard, tas
             },
           )}
         </div>
-      </div>
-
-      <div className="an-card">
-        <div className="an-card-title">
-          Header
-          <span className="set-count">{shown} of {HEADER_BUTTONS.length} shown</span>
-        </div>
-        <div className="set-rows">
-          {HEADER_BUTTONS.map(({ key, label, hint }) => (
-            <ToggleRow
-              key={key}
-              label={label}
-              hint={hint}
-              on={headerBtns[key]}
-              onToggle={() => onToggleHeaderBtn(key)}
-            />
-          ))}
+        <div className="set-theme-grid">
+          {THEMES.map((t) => {
+            const active = theme.id === t.id
+            return (
+              <div
+                key={t.id}
+                role="button"
+                aria-pressed={active}
+                className={'set-theme-card' + (active ? ' on' : '')}
+                onClick={() => activateTheme(t.id)}
+              >
+                <span className="set-strip">
+                  {COLOR_KEYS.map((k) => (
+                    <i key={k} style={{ background: t.colors[k] }} />
+                  ))}
+                </span>
+                <span className="set-theme-foot">
+                  <span className="set-theme-name">{t.name}</span>
+                  {active && <span className="set-state on">Active</span>}
+                </span>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

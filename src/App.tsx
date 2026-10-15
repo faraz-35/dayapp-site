@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Analytics } from '@vercel/analytics/react'
+import { MoonIcon, SunIcon, themeIsLight, toggleLight, useTheme } from './themes'
 
 // The demo ships as its own chunk — the landing page never parses or
 // executes it on the critical path; the skeleton holds the window's height
@@ -81,6 +82,7 @@ const NAV: [string, string][] = [
 ]
 
 function SiteNav() {
+  const theme = useTheme()
   return (
     <nav className="site-nav">
       <div className="site-nav-inner">
@@ -89,6 +91,14 @@ function SiteNav() {
           {NAV.map(([label, href]) => (
             <a key={href} href={href}>{label}</a>
           ))}
+          <button
+            className="nav-btn"
+            onClick={toggleLight}
+            title={themeIsLight(theme) ? 'Switch to dark mode' : 'Switch to light mode'}
+            aria-label="Toggle light mode"
+          >
+            {themeIsLight(theme) ? <SunIcon /> : <MoonIcon />}
+          </button>
         </div>
       </div>
     </nav>
