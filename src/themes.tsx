@@ -1,8 +1,8 @@
 // The site's theme system — the app's model ported whole: a theme is the
-// token ladder re-valued, applyTheme writes the custom properties onto
-// <html>, and every surface (page + demo window) re-skins in one paint.
-// No component knows themes exist beyond the three doors: the nav toggle,
-// the demo window's cycle button, and the demo's Settings → Appearance.
+// token ladder re-valued, applyTheme writes the custom properties onto an
+// element, and everything under it re-skins in one paint. Two scopes: the
+// page's theme (the nav toggle's, persisted, system-defaulted) and the demo
+// window's own (its Settings → Appearance + cycle button, session-only).
 //
 // A theme carries eleven color shades. The derived values — the accent's
 // rgb triplet, the nav's translucent bg, the scrims, the shadows, the
@@ -140,9 +140,12 @@ function rgbTriple(hex: string): string {
   return [0, 2, 4].map((i) => parseInt(m.slice(i, i + 2), 16)).join(', ')
 }
 
-export function applyTheme(theme: Theme) {
+// Writes the ladder + the derived layer onto `root` — the document element
+// for the page's theme, the demo window's own element for its
+// session-scoped one (custom properties inherit; the window overrides).
+export function applyTheme(theme: Theme, root: HTMLElement = document.documentElement) {
   const c = theme.colors
-  const r = document.documentElement.style
+  const r = root.style
   r.setProperty('--bg', c.bg)
   r.setProperty('--bg-soft', c.bgSoft)
   r.setProperty('--bg-elev', c.bgElev)
@@ -176,27 +179,43 @@ export function applyTheme(theme: Theme) {
     light ? '0 8px 24px rgba(25, 30, 40, 0.16)' : '0 8px 24px rgba(0, 0, 0, 0.5)',
   )
   r.setProperty('color-scheme', light ? 'light' : 'dark')
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', c.bg)
-}
-
-// Called once before render: first paint already wears the persisted theme.
-export function initTheme() {
-  applyTheme(current)
+  if (root === document.documentElement) {
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', c.bg)
+  }
 }
 
 // ---- Store -----------------------------------------------------------------
-// One theme for the whole site — the nav toggle, the demo window's cycle
-// button and the demo's Appearance card all write through here, and every
-// reader subscribes. Persisted in localStorage; the page defaults dark.
+// One theme for the page — the nav toggle writes it, every reader
+// subscribes. The demo window keeps its own session-scoped copy (its
+// settings govern the window, never the page). With no stored choice the
+// page follows the system; an explicit pick wins from then on.
 
 const KEY = 'dayapp-site-theme'
 
-function resolve(id: string | null): Theme {
-  return THEMES.find((t) => t.id === id) ?? DARK
+function systemTheme(): Theme {
+  return matchMedia('(prefers-color-scheme: light)').matches ? LIGHT : DARK
 }
 
-let current: Theme = resolve(localStorage.getItem(KEY))
+// The demo window's default: the system's answer at mount.
+export function systemThemeId(): string {
+  return systemTheme().id
+}
+
+export function themeById(id: string | null): Theme {
+  return (id && THEMES.find((t) => t.id === id)) || systemTheme()
+}
+
+let current: Theme = themeById(localStorage.getItem(KEY))
 const listeners = new Set<() => void>()
+
+// System flips reach the page only while it still follows the system — an
+// explicit pick is a decision the OS doesn't override.
+matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+  if (localStorage.getItem(KEY)) return
+  current = systemTheme()
+  applyTheme(current)
+  listeners.forEach((cb) => cb())
+})
 
 export function useTheme(): Theme {
   return useSyncExternalStore(
@@ -209,10 +228,15 @@ export function useTheme(): Theme {
 }
 
 export function activateTheme(id: string) {
-  current = resolve(id)
+  current = themeById(id)
   localStorage.setItem(KEY, current.id)
   applyTheme(current)
   listeners.forEach((cb) => cb())
+}
+
+// Called once before render: first paint already wears the effective theme.
+export function initTheme() {
+  applyTheme(current)
 }
 
 // The nav toggle's one job: cross the mode divide. The full ladder lives in

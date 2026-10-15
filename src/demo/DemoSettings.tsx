@@ -3,11 +3,11 @@
    and the look (Appearance — the theme ladder over the two resting fills).
    The app's SettingsView language — group cards, real switches, theme
    ladder cards, counts in titles, section rows that go inert while Tasks is
-   off — at demo scope. Themes write through the site's one theme store, so
-   a pick re-skins the whole page, not just the window. Mouse-first like the
-   analytics page: no grammar wiring, free-mode scrolling works. */
+   off — at demo scope. A theme pick dresses the window only; the page
+   around it answers to the nav toggle. Mouse-first like the analytics
+   page: no grammar wiring, free-mode scrolling works. */
 
-import { THEMES, activateTheme, useTheme, type ThemeColors } from '../themes'
+import { THEMES, type ThemeColors } from '../themes'
 
 export type FeatureKey = 'tasks' | 'today' | 'daily' | 'backlog' | 'notes'
 export type HeaderBtn = 'journal' | 'quotes' | 'analytics' | 'settings' | 'theme'
@@ -69,7 +69,7 @@ function ToggleRow({ label, hint, on, dep, depHint, onToggle }: {
   )
 }
 
-export default function DemoSettings({ features, onToggleFeature, notesCard, tasksCard, onSetCard, headerBtns, onToggleHeaderBtn }: {
+export default function DemoSettings({ features, onToggleFeature, notesCard, tasksCard, onSetCard, headerBtns, onToggleHeaderBtn, themeId, onSetTheme }: {
   features: Features
   onToggleFeature(key: FeatureKey): void
   notesCard: boolean
@@ -77,8 +77,9 @@ export default function DemoSettings({ features, onToggleFeature, notesCard, tas
   onSetCard(surface: 'notes' | 'tasks', card: boolean): void
   headerBtns: HeaderBtns
   onToggleHeaderBtn(btn: HeaderBtn): void
+  themeId: string
+  onSetTheme(id: string): void
 }) {
-  const theme = useTheme()
   const onCount = FEATURES.filter((f) => features[f.key]).length
   const shown = HEADER_BUTTONS.filter((b) => headerBtns[b.key]).length
   const tasksOff = !features.tasks
@@ -150,14 +151,14 @@ export default function DemoSettings({ features, onToggleFeature, notesCard, tas
         </div>
         <div className="set-theme-grid">
           {THEMES.map((t) => {
-            const active = theme.id === t.id
+            const active = themeId === t.id
             return (
               <div
                 key={t.id}
                 role="button"
                 aria-pressed={active}
                 className={'set-theme-card' + (active ? ' on' : '')}
-                onClick={() => activateTheme(t.id)}
+                onClick={() => onSetTheme(t.id)}
               >
                 <span className="set-strip">
                   {COLOR_KEYS.map((k) => (

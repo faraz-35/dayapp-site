@@ -12,7 +12,7 @@ import {
   type ActionRow, type ActionVerb, type EntryRow, type HideDuration, type Item,
   type Note, type Priority, type Project, type Seed,
 } from './model'
-import { MoonIcon, SunIcon, THEMES, activateTheme, themeIsLight, themeModeSlot, useTheme } from '../themes'
+import { MoonIcon, SunIcon, THEMES, applyTheme, systemThemeId, themeById, themeIsLight, themeModeSlot } from '../themes'
 import DemoList, { type CaptureHandle, type Pop, type Sel } from './DemoList'
 import DemoAnalytics from './DemoAnalytics'
 import DemoEntries from './DemoEntries'
@@ -28,13 +28,17 @@ const VIEW_TITLES: Record<View, string> = {
 const ADDRESS_KEYS = new Set(['n', 't', 'd', 'b'])
 
 export default function DemoApp() {
-  const theme = useTheme()
-  const themeSlot = themeModeSlot(theme, THEMES)
+  // The window's theme is its own — session-only like every demo setting,
+  // defaulted to the system's answer at mount. It never touches the page's
+  // theme (the nav toggle's business).
+  const [demoThemeId, setDemoThemeId] = useState(systemThemeId)
+  const demoTheme = themeById(demoThemeId)
+  const themeSlot = themeModeSlot(demoTheme, THEMES)
   // The window's theme button walks the whole ladder — the app's header
   // behavior; the Settings page stays the direct door.
   const cycleTheme = () => {
-    const i = THEMES.findIndex((t) => t.id === theme.id)
-    activateTheme(THEMES[(i + 1) % THEMES.length].id)
+    const i = THEMES.findIndex((t) => t.id === demoTheme.id)
+    setDemoThemeId(THEMES[(i + 1) % THEMES.length].id)
   }
   const [seed0] = useState<Seed>(makeSeed)
   const [items, setItems] = useState(seed0.items)
@@ -96,6 +100,12 @@ export default function DemoApp() {
   const noteCapRef = useRef<CaptureHandle | null>(null)
 
   const activeSession = openSession(sessions)
+
+  /* ---- the window wears its own theme: the ladder is scoped to the demo
+          root, so the page around it keeps the nav toggle's theme ---- */
+  useEffect(() => {
+    if (rootRef.current) applyTheme(demoTheme, rootRef.current)
+  }, [demoTheme])
 
   /* ---- visibility pipelines (the ⌘P toggles + ⌘F filters compose here) ---- */
 
@@ -574,9 +584,9 @@ export default function DemoApp() {
                 </button>
               )}
               {headerBtns.theme && (
-                <button className="win-ico theme-cycle" title={`Theme: ${theme.name}`}
+                <button className="win-ico theme-cycle" title={`Theme: ${demoTheme.name}`}
                   aria-label="Cycle theme" onClick={cycleTheme}>
-                  {themeIsLight(theme) ? <SunIcon /> : <MoonIcon />}
+                  {themeIsLight(demoTheme) ? <SunIcon /> : <MoonIcon />}
                   {themeSlot.count > 1 && (
                     <span className="theme-idx" aria-hidden="true">{themeSlot.index}</span>
                   )}
@@ -635,6 +645,8 @@ export default function DemoApp() {
                 onSetCard={(surface, card) => surface === 'notes' ? setNotesCard(card) : setTasksCard(card)}
                 headerBtns={headerBtns}
                 onToggleHeaderBtn={(btn: HeaderBtn) => setHeaderBtns((hs) => ({ ...hs, [btn]: !hs[btn] }))}
+                themeId={demoThemeId}
+                onSetTheme={setDemoThemeId}
               />
             )}
             {view === 'analytics' && (
