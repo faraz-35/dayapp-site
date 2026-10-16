@@ -2,9 +2,10 @@
 #
 #   irm https://getdayapp.vercel.app/install.ps1 | iex
 #
-# Installs the Windows dev build (the rolling windows-dev prerelease). It
-# tracks the dev channel until Windows joins the versioned release channel,
-# then the URL below switches to releases/latest.
+# Installs the official Windows release (the versioned GitHub release, built
+# and signed by CI on every version push - the same artifact the Download
+# link serves). Releases resolve through the API's latest pointer, which only
+# ever names a real release, never the rolling windows-dev prerelease.
 # The file downloads with curl.exe, which stamps no Mark-of-the-Web on the
 # download, so the installer runs without a zone warning. A failed or
 # interrupted run keeps its .part file; re-running the installer resumes
@@ -22,16 +23,16 @@ function Install-DayApp {
     return
   }
 
-  Write-Host ">> resolving the latest Windows build"
+  Write-Host ">> resolving the latest release"
   try {
-    $rel = Invoke-RestMethod 'https://api.github.com/repos/faraz-35/dayapp/releases/tags/windows-dev'
+    $rel = Invoke-RestMethod 'https://api.github.com/repos/faraz-35/dayapp/releases/latest'
   } catch {
     Write-Host "!! could not reach github - $($_.Exception.Message)" -ForegroundColor Red
     return
   }
   $asset = $rel.assets | Where-Object { $_.name -like 'DayApp_*-setup.exe' } | Select-Object -First 1
   if (-not $asset) {
-    Write-Host "!! no Windows build found - is the windows-dev release up?" -ForegroundColor Red
+    Write-Host "!! no Windows build found - is the latest release up?" -ForegroundColor Red
     return
   }
 
