@@ -7,10 +7,10 @@
 #   macOS — the latest release .app into /Applications. Files fetched with
 #           curl carry no Gatekeeper quarantine stamp, so the app opens
 #           without the "damaged" wall browser downloads hit on Apple Silicon.
-#   Linux — the AppImage from the rolling linux-dev release into ~/.local/bin.
+#   Linux — the AppImage from the latest versioned release into ~/.local/bin.
 #           Needs webkit2gtk-4.1 (the script names the install command if
-#           it's missing). Linux tracks the dev channel until it joins the
-#           versioned release channel.
+#           it's missing). The app's built-in updater takes over from here:
+#           a version bump ships through it, no reinstall needed.
 # Downloads are resumable: a failed or interrupted run keeps its .part file,
 # and re-running the installer continues from where it stopped.
 # Your tasks live in the app's data dir and are never touched by this script.
@@ -81,10 +81,10 @@ elif [ "$OS" = "Linux" ]; then
     Debian/Ubuntu:  sudo apt install libwebkit2gtk-4.1-0"
   fi
 
-  say "resolving the latest Linux build"
-  ASSET_URL="$(curl -fsSL https://api.github.com/repos/faraz-35/dayapp/releases/tags/linux-dev \
+  say "resolving the latest release"
+  ASSET_URL="$(curl -fsSL https://api.github.com/repos/faraz-35/dayapp/releases/latest \
     | grep -o 'https://[^"]*\.AppImage' | head -1)"
-  [ -n "$ASSET_URL" ] || die "no Linux build found — is the linux-dev release up?"
+  [ -n "$ASSET_URL" ] || die "no Linux build found — is the latest release up?"
 
   say "downloading DayApp"
   mkdir -p "$HOME/.local/bin"
