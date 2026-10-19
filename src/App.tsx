@@ -28,7 +28,7 @@ const BUILD_CMD = [
   'cd dayapp && npm install',
   'npm run tauri build',
 ].join('\n')
-const SITE_TITLE = 'DayApp — a to-do list and notes app that journals itself'
+const SITE_TITLE = 'DayApp — a hyper-minimal tasks, notes and goals superapp'
 
 function CopyIcon() {
   return (
@@ -166,7 +166,7 @@ const FEATURES: { label: string; title: string; body: ReactNode }[] = [
   },
   {
     label: 'journal',
-    title: 'The journal writes itself',
+    title: 'An automatic journal',
     body: 'Everything you add, finish or move is logged with its time, automatically. So “what did I do this week?” is already answered.',
   },
   {
@@ -418,7 +418,7 @@ export default function App() {
           <div className="fx wordmark">DayApp</div>
           <h1 className="fx d1">
             The most <span className="brace">{'{'}</span> Simple &amp; Powerful{' '}
-            <span className="brace">{'}'}</span> Notes &amp; To-do app
+            <span className="brace">{'}'}</span> Tasks, Notes &amp; Goals app
           </h1>
           <div className="fx d2 hero-line">Notes · Tasks · Journal · Timers · Analytics</div>
           <div className="fx d2 hero-install">
