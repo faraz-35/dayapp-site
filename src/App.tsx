@@ -55,6 +55,64 @@ function ChevronIcon() {
   )
 }
 
+function StarIcon({ size = 13 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 16 16" width={size} height={size} aria-hidden="true">
+      <path d="M8 1.5 L9.6 5.8 L14.2 6 L10.6 8.8 L11.8 13.3 L8 10.7 L4.2 13.3 L5.4 8.8 L1.8 6 L6.4 5.8 Z" fill="currentColor" />
+    </svg>
+  )
+}
+
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+      <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+      <path d="M3.6 3.6l8.8 8.8M12.4 3.6l-8.8 8.8" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// The repo's live star count — one fetch, module-cached, shared by the Star
+// button. null until it lands (or forever when the API is rate-limited or
+// unreachable; the count segment just never renders).
+const STARS_PROMISE: Promise<number | null> =
+  fetch('https://api.github.com/repos/faraz-35/dayapp')
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j) => (j && typeof j.stargazers_count === 'number' ? j.stargazers_count : null))
+    .catch(() => null)
+
+function useGitHubStars(): number | null {
+  const [stars, setStars] = useState<number | null>(null)
+  useEffect(() => { STARS_PROMISE.then(setStars) }, [])
+  return stars
+}
+
+// The repo's star CTA. GitHub lets no site star a repo in-place — the star
+// needs the visitor's GitHub login, so every star button on every static
+// site is a link to the repo underneath (the iframe buttons too; their
+// "Star" is an <a> to the repo). This one does the same thing in the site's
+// own look, with the live count beside the verb.
+function StarButton() {
+  const stars = useGitHubStars()
+  return (
+    <a className="btn-star" href={GITHUB} title="Star DayApp on GitHub">
+      {stars != null && (
+        <span className="star-count"><StarIcon /><span>{stars}</span></span>
+      )}
+      <span className="star-label">
+        {stars == null && <StarIcon />} Star on GitHub
+      </span>
+    </a>
+  )
+}
+
 // A terminal block with a corner copy button. The button copies `copy` (the
 // raw commands — display lines may carry comments the clipboard shouldn't),
 // flips to a check for a beat, and owns its own state so several boxes on
@@ -86,22 +144,40 @@ function CodeBox({ copy, snug, children }: {
   )
 }
 
-// The hero's install line: the detected platform's command, with a faint
-// link underneath to flip to the other shell's command (the page gets
-// forwarded to friends on the other system).
+// The hero's install line: the detected platform's command, the instruction
+// that names the shell to open (the one real install failure is irm pasted
+// into cmd.exe), and both platforms on screen — Mac & Linux share the one
+// curl command, so two tabs cover everyone.
 function InstallLine() {
   const [win, setWin] = useState(DETECTED_WIN)
   const cmd = win ? INSTALL_CMD_WIN : INSTALL_CMD_MAC
   return (
     <>
+      <div className="install-tabs" role="tablist" aria-label="install platform">
+        <button
+          role="tab"
+          aria-selected={!win}
+          className={'install-tab' + (!win ? ' active' : '')}
+          onClick={() => setWin(false)}
+        >
+          Mac &amp; Linux
+        </button>
+        <button
+          role="tab"
+          aria-selected={win}
+          className={'install-tab' + (win ? ' active' : '')}
+          onClick={() => setWin(true)}
+        >
+          Windows
+        </button>
+      </div>
       <CodeBox snug copy={cmd}>
         <div className="tline"><span className="tp">{win ? '>' : '$'}</span> {cmd}</div>
       </CodeBox>
-      <div className="install-flip">
-        <span>{win ? 'Windows' : 'macOS'}</span>
-        <button onClick={() => setWin(!win)}>
-          {win ? 'show the Mac command' : 'show the Windows command'}
-        </button>
+      <div className="install-note">
+        {win
+          ? 'Open PowerShell and paste the above command to install.'
+          : 'Open Terminal and paste the above command to install.'}
       </div>
     </>
   )
@@ -114,16 +190,23 @@ const NAV: [string, string][] = [
   ['GitHub', '#code'],
 ]
 
+// The nav: the logo (the app's own icon), the section links, the theme
+// toggle. Under 640px the links fold into the hamburger's sheet.
 function SiteNav() {
   const theme = useTheme()
+  const [menu, setMenu] = useState(false)
   return (
     <nav className="site-nav">
       <div className="site-nav-inner">
-        <a className="site-nav-brand" href="#top">DayApp</a>
-        <div className="site-nav-links">
-          {NAV.map(([label, href]) => (
-            <a key={href} href={href}>{label}</a>
-          ))}
+        <a className="site-nav-brand" href="#top" aria-label="DayApp">
+          <img src="/assets/logo.svg" alt="" />
+        </a>
+        <div className="site-nav-right">
+          <div className="site-nav-links">
+            {NAV.map(([label, href]) => (
+              <a key={href} href={href}>{label}</a>
+            ))}
+          </div>
           <button
             className="nav-btn"
             onClick={toggleLight}
@@ -132,8 +215,27 @@ function SiteNav() {
           >
             {themeIsLight(theme) ? <SunIcon /> : <MoonIcon />}
           </button>
+          <button
+            className="nav-btn nav-menu-btn"
+            onClick={() => setMenu(!menu)}
+            title={menu ? 'Close menu' : 'Menu'}
+            aria-label={menu ? 'Close menu' : 'Open menu'}
+            aria-expanded={menu}
+          >
+            {menu ? <CloseIcon /> : <MenuIcon />}
+          </button>
         </div>
       </div>
+      {menu && (
+        <>
+          <div className="nav-sheet-backdrop" onClick={() => setMenu(false)} />
+          <div className="nav-sheet">
+            {NAV.map(([label, href]) => (
+              <a key={href} href={href} onClick={() => setMenu(false)}>{label}</a>
+            ))}
+          </div>
+        </>
+      )}
     </nav>
   )
 }
@@ -416,14 +518,10 @@ export default function App() {
       <header className="hero" id="top">
         <div className="hero-inner">
           <div className="fx wordmark">DayApp</div>
-          <h1 className="fx d1">
-            The most <span className="brace">{'{'}</span> Simple &amp; Powerful{' '}
-            <span className="brace">{'}'}</span> Tasks, Notes &amp; Goals app
-          </h1>
-          <div className="fx d2 hero-line">Notes · Tasks · Journal · Timers · Analytics</div>
+          <h1 className="fx d1">A hyper-minimal tasks, notes and goals superapp</h1>
           <div className="fx d2 hero-install">
-            <div className="tlabel">Install with one simple command</div>
             <InstallLine />
+            <StarButton />
           </div>
         </div>
       </header>
@@ -523,6 +621,7 @@ export default function App() {
           </div>
         </CodeBox>
         <div className="cta-row center">
+          <StarButton />
           <a className="btn-ghost" href={GITHUB}>
             github.com/faraz-35/dayapp ↗
           </a>
