@@ -40,6 +40,9 @@ export default function DemoApp() {
     const i = THEMES.findIndex((t) => t.id === demoTheme.id)
     setDemoThemeId(THEMES[(i + 1) % THEMES.length].id)
   }
+  // the palette button's glyph mirrors the platform's real modifier — ⌘ on
+  // macOS, the prompt field elsewhere (Ctrl has no pictograph)
+  const isMac = /Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent)
   const [seed0] = useState<Seed>(makeSeed)
   const [items, setItems] = useState(seed0.items)
   const [notes, setNotes] = useState(seed0.notes)
@@ -73,18 +76,32 @@ export default function DemoApp() {
   const [showBacklog, setShowBacklog] = useState(true)
   const [focusMode, setFocusMode] = useState(false)
 
+  // the header's ◐ flips every archive axis that exists, together — the
+  // app's one-button reveal
+  const anyReveal = showHiddenTasks || showHiddenNotes
+  const toggleHidden = () => {
+    setShowHiddenTasks(!anyReveal && features.taskHide)
+    setShowHiddenNotes(!anyReveal && features.noteHide)
+  }
+
   // the settings page (⌘P → Open Settings, or the gear): existence (Features),
-  // the resting fills (UI), the window's icon buttons (Header). Existence is
-  // configuration — Show Default View and Reset the Demo never touch it.
+  // the resting fills (Appearance), the window's icon buttons (Header), the
+  // Focus lens (Views). Existence is configuration — Show Default View and
+  // Reset the Demo never touch it. The defaults are the site's chosen first
+  // impression: notes bare, note tiers off, task details off, reminders off.
   const [features, setFeatures] = useState<Features>({
-    tasks: true, today: true, daily: true, backlog: true, notes: true,
+    tasks: true, today: true, daily: true, backlog: true,
+    timer: true, reminders: false, taskProjects: true, taskHide: true, dailyPause: true,
+    taskDetails: false, taskPriorities: true, agent: true,
+    notes: true, noteProjects: true, notePriorities: false, noteHide: true, noteDownload: true,
+    journal: true, quotes: true,
   })
-  const [notesCard, setNotesCard] = useState(true)
+  const [notesCard, setNotesCard] = useState(false)
   const [tasksCard, setTasksCard] = useState(false)
   const [headerBtns, setHeaderBtns] = useState<HeaderBtns>({
     // Journal and Quotes default off — the written-entry pages are opt-in
     // chrome, same default as the app.
-    journal: false, quotes: false, analytics: true, settings: true, theme: true,
+    palette: true, hidden: true, journal: false, quotes: false, analytics: true, settings: true, theme: true,
   })
 
   const [now, setNow] = useState(0)
@@ -118,10 +135,14 @@ export default function DemoApp() {
   const { today, daily, backlog, allTasks } = useMemo(() => {
     const t = features.tasks && features.today ? items.filter((i) => i.section === 'today' && pass(i)) : []
     const d = features.tasks && features.daily ? items.filter((i) => i.section === 'daily' && pass(i)) : []
-    const b = features.tasks && features.backlog
+    const bRaw = features.tasks && features.backlog
       ? items.filter((i) => i.section === 'backlog' && pass(i) && (!focusMode || i.priority === 1))
-        .sort((a, c) => tierRank(a.priority) - tierRank(c.priority) || a.id - c.id)
       : []
+    // tier-sorted only while the priority axis exists — off, the Backlog is
+    // one flat list
+    const b = features.taskPriorities
+      ? [...bRaw].sort((a, c) => tierRank(a.priority) - tierRank(c.priority) || a.id - c.id)
+      : bRaw
     return { today: t, daily: d, backlog: b, allTasks: [...t, ...d, ...b] }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, hiddenPriorities, showHiddenTasks, agentFilter, projectFilter, focusMode, features])
@@ -174,6 +195,11 @@ export default function DemoApp() {
 
   /* ---- mutations — every item write appends to `actions` ---- */
 
+  // the axes that exist right now (Settings) — the parsers only strip what
+  // these allow, so a switched-off axis's token stays literal text
+  const taskFlags = { projects: features.taskProjects, priorities: features.taskPriorities, agent: features.agent }
+  const noteFlags = { projects: features.noteProjects, priorities: features.notePriorities }
+
   const logAction = (verb: ActionVerb, text: string, itemId: number | null, projectId: number | null, priority: Priority) => {
     const projectName = projects.find((p) => p.id === projectId)?.name ?? null
     const row: ActionRow = {
@@ -218,7 +244,7 @@ export default function DemoApp() {
   const act = {
     addTask(raw: string) {
       const proj = [...projects]
-      const { section, tags } = parseTaskCapture(raw, proj)
+      const { section, tags } = parseTaskCapture(raw, proj, taskFlags)
       if (!tags.text) return
       if (proj.length !== projects.length) setProjects(proj)
       const item: Item = {
@@ -256,7 +282,7 @@ export default function DemoApp() {
       if (!text || text === item.text) return
       const proj = [...projects]
       // no token on an edit leaves the value alone — current rides in
-      const tags = parseTags(text, proj, { priority: item.priority, projectId: item.projectId, agent: item.agent })
+      const tags = parseTags(text, proj, { priority: item.priority, projectId: item.projectId, agent: item.agent }, taskFlags)
       if (proj.length !== projects.length) setProjects(proj)
       setItems((xs) => xs.map((x) => x.id === item.id
         ? { ...x, text: tags.text, priority: tags.priority, projectId: tags.projectId, agent: tags.agent }
@@ -289,14 +315,16 @@ export default function DemoApp() {
       setItems((xs) => xs.map((x) => (x.id === id ? { ...x, details: body } : x)))
     },
     addNote(raw: string) {
-      // the typed capture bus: a leading ##j / ##q writes an entry, not a note
-      const entry = parseEntryCapture(raw)
+      // the typed capture bus: a leading ##j / ##q writes an entry, not a
+      // note — a switched-off route degrades the line to an ordinary note,
+      // token as literal prose
+      const entry = parseEntryCapture(raw, { journal: features.journal, quotes: features.quotes })
       if (entry.kind) {
         if (entry.text) addEntry(entry.kind, entry.text)
         return
       }
       const proj = [...projects]
-      const tags = parseTags(raw, proj)
+      const tags = parseTags(raw, proj, undefined, noteFlags)
       if (!tags.text) return
       if (proj.length !== projects.length) setProjects(proj)
       const note: Note = {
@@ -309,7 +337,7 @@ export default function DemoApp() {
       setNotes((ns) => ns.map((n) => {
         if (n.id !== id) return n
         const proj = [...projects]
-        const caught = splitNoteFooter(body, proj, { priority: n.priority, projectId: n.projectId })
+        const caught = splitNoteFooter(body, proj, { priority: n.priority, projectId: n.projectId }, noteFlags)
         if (caught) {
           if (proj.length !== projects.length) setProjects(proj)
           return { ...n, body: caught.body, priority: caught.priority, projectId: caught.projectId }
@@ -523,9 +551,9 @@ export default function DemoApp() {
 
   const paletteEntries: PaletteEntry[] = [
     { label: 'View Analytics', hint: 'the week on one page', run: () => setView('analytics') },
-    { label: 'View Journal', hint: '##j lines by day', run: () => setView('journal') },
-    { label: 'View Quotes', hint: '##q lines by day', run: () => setView('quotes') },
-    { label: view === 'settings' ? 'Close Settings' : 'Open Settings', hint: 'features · fills · header', run: () => setView(view === 'settings' ? 'list' : 'settings') },
+    ...(features.journal ? [{ label: 'View Journal', hint: '##j lines by day', run: () => setView('journal') }] : []),
+    ...(features.quotes ? [{ label: 'View Quotes', hint: '##q lines by day', run: () => setView('quotes') }] : []),
+    { label: view === 'settings' ? 'Close Settings' : 'Open Settings', hint: 'features · appearance · header · views', run: () => setView(view === 'settings' ? 'list' : 'settings') },
     { label: 'Show Default View', hint: 'reset the working view', run: resetView },
     { label: focusMode ? 'Exit Focus Mode' : 'Enter Focus Mode', hint: 'P1 notes · Today · Daily · P1 backlog', run: () => setFocusMode((v) => !v) },
     // the two-layers rule: a surface's Show/Hide entry exists only while the
@@ -534,10 +562,10 @@ export default function DemoApp() {
     ...(features.tasks && features.today ? [{ label: showToday ? 'Hide Today' : 'Show Today', hint: '', run: () => setShowToday((v) => !v) }] : []),
     ...(features.tasks && features.daily ? [{ label: showDaily ? 'Hide Daily' : 'Show Daily', hint: '', run: () => setShowDaily((v) => !v) }] : []),
     ...(features.tasks && features.backlog ? [{ label: showBacklog ? 'Hide Backlog' : 'Show Backlog', hint: '', run: () => setShowBacklog((v) => !v) }] : []),
-    ...(features.tasks ? [{ label: showHiddenTasks ? 'Hide Hidden Tasks' : 'Show Hidden Tasks', hint: 'archived rows, inline', run: () => setShowHiddenTasks((v) => !v) }] : []),
-    ...(features.notes ? [{ label: showHiddenNotes ? 'Hide Hidden Notes' : 'Show Hidden Notes', hint: 'archived notes, inline', run: () => setShowHiddenNotes((v) => !v) }] : []),
-    ...(features.tasks ? [{ label: agentFilter === 'agent' ? 'Show My Tasks' : 'Show Agent Tasks', hint: 'the 🤖 queue', run: () => setAgentFilter((v) => (v === 'agent' ? null : 'agent')) }] : []),
-    ...(features.tasks ? [
+    ...(features.tasks && features.taskHide ? [{ label: showHiddenTasks ? 'Hide Hidden Tasks' : 'Show Hidden Tasks', hint: 'archived rows, inline', run: () => setShowHiddenTasks((v) => !v) }] : []),
+    ...(features.notes && features.noteHide ? [{ label: showHiddenNotes ? 'Hide Hidden Notes' : 'Show Hidden Notes', hint: 'archived notes, inline', run: () => setShowHiddenNotes((v) => !v) }] : []),
+    ...(features.tasks && features.agent ? [{ label: agentFilter === 'agent' ? 'Show My Tasks' : 'Show Agent Tasks', hint: 'the 🤖 queue', run: () => setAgentFilter((v) => (v === 'agent' ? null : 'agent')) }] : []),
+    ...(features.tasks && features.taskPriorities ? [
       { label: hiddenPriorities.includes(1) ? 'Show Priority 1 Tasks' : 'Hide Priority 1 Tasks', hint: '', run: () => togglePrio(1) },
       { label: hiddenPriorities.includes(2) ? 'Show Priority 2 Tasks' : 'Hide Priority 2 Tasks', hint: '', run: () => togglePrio(2) },
       { label: hiddenPriorities.includes(3) ? 'Show Priority 3 Tasks' : 'Hide Priority 3 Tasks', hint: '', run: () => togglePrio(3) },
@@ -565,13 +593,15 @@ export default function DemoApp() {
         <div className="app-window">
           <div className="win-header">
             <div className="win-left">
-              {headerBtns.journal && (
-                <button className={'win-ico' + (view === 'journal' ? ' on' : '')} title={view === 'journal' ? 'Back to the list' : 'Journal'}
-                  onClick={() => setView(view === 'journal' ? 'list' : 'journal')}>{view === 'journal' ? '×' : '¶'}</button>
+              {headerBtns.palette && (
+                <button className="win-ico" title={isMac ? 'Command palette (⌘P)' : 'Command palette (Ctrl+P)'}
+                  onClick={() => { setSearchOpen(false); setPaletteOpen((v) => !v) }}>
+                  <PaletteIcon mac={isMac} />
+                </button>
               )}
-              {headerBtns.quotes && (
-                <button className={'win-ico' + (view === 'quotes' ? ' on' : '')} title={view === 'quotes' ? 'Back to the list' : 'Quotes'}
-                  onClick={() => setView(view === 'quotes' ? 'list' : 'quotes')}>{view === 'quotes' ? '×' : '❝'}</button>
+              {headerBtns.hidden && (features.taskHide || features.dailyPause || features.noteHide) && (
+                <button className={'win-ico' + (anyReveal ? ' on' : '')} title="Hidden entries"
+                  onClick={toggleHidden}>◐</button>
               )}
               {headerBtns.analytics && (
                 <button className={'win-ico' + (view === 'analytics' ? ' on' : '')} title={view === 'analytics' ? 'Back to the list' : 'Analytics'}
@@ -583,6 +613,20 @@ export default function DemoApp() {
                   )}
                 </button>
               )}
+              {headerBtns.journal && features.journal && (
+                <button className={'win-ico' + (view === 'journal' ? ' on' : '')} title={view === 'journal' ? 'Back to the list' : 'Journal'}
+                  onClick={() => setView(view === 'journal' ? 'list' : 'journal')}>{view === 'journal' ? '×' : '¶'}</button>
+              )}
+              {headerBtns.quotes && features.quotes && (
+                <button className={'win-ico' + (view === 'quotes' ? ' on' : '')} title={view === 'quotes' ? 'Back to the list' : 'Quotes'}
+                  onClick={() => setView(view === 'quotes' ? 'list' : 'quotes')}>{view === 'quotes' ? '×' : '❝'}</button>
+              )}
+              {headerBtns.settings && (
+                <button className={'win-ico' + (view === 'settings' ? ' on' : '')} title={view === 'settings' ? 'Back to the list' : 'Settings'}
+                  onClick={() => setView(view === 'settings' ? 'list' : 'settings')}>
+                  {view === 'settings' ? '×' : <SettingsIcon />}
+                </button>
+              )}
               {headerBtns.theme && (
                 <button className="win-ico theme-cycle" title={`Theme: ${demoTheme.name}`}
                   aria-label="Cycle theme" onClick={cycleTheme}>
@@ -592,16 +636,10 @@ export default function DemoApp() {
                   )}
                 </button>
               )}
-              {headerBtns.settings && (
-                <button className={'win-ico' + (view === 'settings' ? ' on' : '')} title={view === 'settings' ? 'Back to the list' : 'Settings'}
-                  onClick={() => setView(view === 'settings' ? 'list' : 'settings')}>
-                  {view === 'settings' ? '×' : <SettingsIcon />}
-                </button>
-              )}
             </div>
             <span className="win-title">{VIEW_TITLES[view]}</span>
             <div className="win-right">
-              {activeSession && (
+              {features.timer && activeSession && (
                 <span className="timer-chip" title={activeSession.itemText}>
                   <span className="timer-chip-main">
                     <span className="timer-chip-pulse" />
@@ -623,6 +661,7 @@ export default function DemoApp() {
           <div className="win-body" ref={bodyRef}>
             {view === 'list' && (
               <DemoList
+                features={features}
                 tasksArea={features.tasks}
                 showNotes={features.notes && showNotes}
                 showToday={features.tasks && features.today && showToday}
@@ -647,6 +686,8 @@ export default function DemoApp() {
                 onToggleHeaderBtn={(btn: HeaderBtn) => setHeaderBtns((hs) => ({ ...hs, [btn]: !hs[btn] }))}
                 themeId={demoThemeId}
                 onSetTheme={setDemoThemeId}
+                focusMode={focusMode}
+                onToggleFocusMode={() => setFocusMode((v) => !v)}
               />
             )}
             {view === 'analytics' && (
@@ -683,6 +724,8 @@ export default function DemoApp() {
         <DemoSearch
           items={allTasks}
           projects={projects}
+          projectsEnabled={features.taskProjects || features.noteProjects}
+          agentEnabled={features.agent}
           onClose={() => setSearchOpen(false)}
           onPickTask={(id) => { setSearchOpen(false); setView('list'); selectTask(id) }}
           onPickProject={(id) => { setSearchOpen(false); setView('list'); setProjectFilter((prev) => (prev === id ? null : id)) }}
@@ -698,6 +741,26 @@ function groupNotes(notes: Note[]): Note[][] {
   ;[...notes].sort((a, b) => tierRank(a.priority) - tierRank(b.priority) || a.id - b.id)
     .forEach((n) => g[tierRank(n.priority) - 1].push(n))
   return g
+}
+
+// The palette door's glyph — the app's IconCommandPalette: ⌘ on macOS (the
+// icon is the key), the prompt field elsewhere (Ctrl has no pictograph, so
+// the icon says "type a command" instead).
+function PaletteIcon({ mac }: { mac: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor"
+      strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {mac ? (
+        <path d="M10 4v8a2 2 0 1 0 2-2H4a2 2 0 1 0 2 2V4a2 2 0 1 0-2 2h8a2 2 0 1 0-2-2" />
+      ) : (
+        <>
+          <rect x="2.2" y="3.4" width="11.6" height="9.2" rx="1.8" />
+          <path d="M5.2 6.4 7 8.1l-1.8 1.7" />
+          <path d="M9.2 10.2h2.3" />
+        </>
+      )}
+    </svg>
+  )
 }
 
 // The settings door's glyph — the classic cog (Lucide's settings outline,

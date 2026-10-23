@@ -160,16 +160,36 @@ export function fmtAt(ts: number): string {
 // axis), edits parse only the trailing !N/#tag/@ tokens.
 export type TokenSurface = 'task-capture' | 'task-edit' | 'note-capture'
 
-const TOKEN_RES: Record<TokenSurface, RegExp> = {
-  'task-capture': /##[tbd](?=\s|$)|![0-3](?=\s|$)|#[\w-]+|@0?(?=\s|$)/g,
-  'task-edit': /![0-3](?=\s|$)|#[\w-]+|@0?(?=\s|$)/g,
-  'note-capture': /##[jq](?=\s|$)|![0-3](?=\s|$)|#[\w-]+/g,
+// The Settings switches ride through here: a switched-off axis's token is
+// literal prose — not colored, not stripped — on every surface at once.
+export interface TagFlags {
+  projects?: boolean
+  priorities?: boolean
+  agent?: boolean
+  journal?: boolean
+  quotes?: boolean
 }
 
-export function tokenSpans(text: string, surface: TokenSurface): Array<[number, number]> {
+// The alternation a surface colors/strips, narrowed by the flags. null =
+// nothing parses on this surface right now.
+function tokenRe(surface: TokenSurface, f?: TagFlags): RegExp | null {
+  const parts: string[] = []
+  if (surface === 'note-capture') {
+    if (f?.journal !== false) parts.push('##j(?=\\s|$)')
+    if (f?.quotes !== false) parts.push('##q(?=\\s|$)')
+  } else {
+    parts.push('##[tbd](?=\\s|$)')
+  }
+  if (f?.priorities !== false) parts.push('![0-3](?=\\s|$)')
+  if (f?.projects !== false) parts.push('#[\\w-]+')
+  if (surface !== 'note-capture' && f?.agent !== false) parts.push('@0?(?=\\s|$)')
+  return parts.length > 0 ? new RegExp(parts.join('|'), 'g') : null
+}
+
+export function tokenSpans(text: string, surface: TokenSurface, flags?: TagFlags): Array<[number, number]> {
+  const re = tokenRe(surface, flags)
   const spans: Array<[number, number]> = []
-  const re = TOKEN_RES[surface]
-  re.lastIndex = 0
+  if (!re) return spans
   let m: RegExpExecArray | null
   while ((m = re.exec(text))) spans.push([m.index, m.index + m[0].length])
   return spans
@@ -185,12 +205,15 @@ export interface Tags {
 // Trailing !N / #tag / bare @ — composable, any order, last wins. With no
 // `current` (a capture) absent tokens leave the values unset; with `current`
 // (an edit) absent tokens leave the current values alone. @0 / !0 / #0 clear.
+// `flags` narrows the grammar to the axes that exist (Settings): a
+// switched-off axis's token is literal text the loop stops at.
 // Project tokens resolve against `projects` (exact, then unique prefix) and
 // create unknown ones.
 export function parseTags(
   raw: string,
   projects: Project[],
   current?: { priority: Priority; projectId: number | null; agent: boolean },
+  flags?: TagFlags,
 ): Tags {
   const words = raw.trim().split(/\s+/)
   let priority = current?.priority ?? null
@@ -203,16 +226,26 @@ export function parseTags(
     const pre = projects.filter((p) => p.name.toLowerCase().startsWith(n))
     return pre.length === 1 ? pre[0].id : null
   }
-  while (words.length > 1 || (words.length === 1 && /^(![0-3]|#[\w-]+|@0?)$/.test(words[0]))) {
+  const kindOf = (w: string): 'agent' | 'unagent' | 'prio' | 'proj' | null => {
+    if (flags?.agent !== false) {
+      if (w === '@') return 'agent'
+      if (w === '@0') return 'unagent'
+    }
+    if (flags?.priorities !== false && /^![0-3]$/.test(w)) return 'prio'
+    if (flags?.projects !== false && /^#[\w-]+$/.test(w)) return 'proj'
+    return null
+  }
+  while (words.length > 1 || (words.length === 1 && kindOf(words[0]))) {
     const w = words[words.length - 1]
-    if (w === '@') agent = true
-    else if (w === '@0') agent = false
-    else if (/^![0-3]$/.test(w)) priority = w === '!0' ? null : (Number(w[1]) as 1 | 2 | 3)
-    else if (/^#[\w-]+$/.test(w)) {
+    const kind = kindOf(w)
+    if (!kind) break
+    if (kind === 'agent') agent = true
+    else if (kind === 'unagent') agent = false
+    else if (kind === 'prio') priority = w === '!0' ? null : (Number(w[1]) as 1 | 2 | 3)
+    else {
       const name = w.slice(1)
       projectId = name === '0' ? null : (findProject(name) ?? addProject(name, projects))
     }
-    else break
     words.pop()
   }
   return { text: words.join(' '), priority, projectId, agent }
@@ -226,7 +259,7 @@ function addProject(name: string, projects: Project[]): number {
 
 // The task capture's route: a leading ##t / ##d / ##b picks the section, a
 // plain line lands in Today, a bare token adds nothing.
-export function parseTaskCapture(raw: string, projects: Project[]): { section: Section; tags: Tags } {
+export function parseTaskCapture(raw: string, projects: Project[], flags?: TagFlags): { section: Section; tags: Tags } {
   let section: Section = 'today'
   let text = raw.trim()
   const route = text.match(/^##([tdb])(\s+|$)/)
@@ -234,32 +267,41 @@ export function parseTaskCapture(raw: string, projects: Project[]): { section: S
     section = route[1] === 't' ? 'today' : route[1] === 'd' ? 'daily' : 'backlog'
     text = text.slice(route[0].length)
   }
-  return { section, tags: parseTags(text, projects) }
+  return { section, tags: parseTags(text, projects, undefined, flags) }
 }
 
 // The typed capture's route: ##j / ##q split journal lines and quotes away
-// from note creation. Leading position only; a bare token is a no-op.
-export function parseEntryCapture(raw: string): { kind: 'journal' | 'quote' | null; text: string } {
+// from note creation. Leading position only; a bare token is a no-op. A
+// switched-off route is literal prose — the whole line stays the note.
+export function parseEntryCapture(raw: string, enabled?: { journal?: boolean; quotes?: boolean }): { kind: 'journal' | 'quote' | null; text: string } {
   const text = raw.trim()
   const route = text.match(/^##([jq])(\s+|$)/)
-  if (route) return { kind: route[1] === 'j' ? 'journal' : 'quote', text: text.slice(route[0].length) }
+  if (route) {
+    const kind = route[1] === 'j' ? 'journal' : 'quote'
+    const on = route[1] === 'j' ? enabled?.journal : enabled?.quotes
+    if (on !== false) return { kind, text: text.slice(route[0].length) }
+  }
   return { kind: null, text }
 }
 
 // A note body's pending footer: tokens typed on their own final line after a
 // blank line are input syntax, caught on blur — stripped from the body and
 // applied to the columns. No token in the footer leaves the values alone;
-// !0 / #0 clear.
+// !0 / #0 clear. `flags` narrows the grammar to the axes that exist.
 export function splitNoteFooter(
   body: string,
   projects: Project[],
   current: { priority: Priority; projectId: number | null },
+  flags?: TagFlags,
 ): { body: string; priority: Priority; projectId: number | null } | null {
+  const isTok = (w: string) =>
+    (flags?.priorities !== false && /^![0-3]$/.test(w)) ||
+    (flags?.projects !== false && /^#[\w-]+$/.test(w))
   const lines = body.split('\n')
   const last = lines[lines.length - 1].trim()
   if (!last || lines.length < 2 || lines[lines.length - 2].trim() !== '') return null
   const words = last.split(/\s+/)
-  if (!words.every((w) => /^(![0-3]|#[\w-]+)$/.test(w))) return null
+  if (!words.every(isTok)) return null
   let { priority, projectId } = current
   for (const w of words) {
     if (/^![0-3]$/.test(w)) priority = w === '!0' ? null : (Number(w[1]) as 1 | 2 | 3)

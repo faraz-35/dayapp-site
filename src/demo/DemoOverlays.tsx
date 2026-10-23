@@ -64,9 +64,11 @@ type SearchMode =
   | { kind: 'projects' }
   | { kind: 'agent' }
 
-export function DemoSearch({ items, projects, onClose, onPickTask, onPickProject, onPickAgent }: {
+export function DemoSearch({ items, projects, projectsEnabled, agentEnabled, onClose, onPickTask, onPickProject, onPickAgent }: {
   items: Item[]
   projects: Project[]
+  projectsEnabled: boolean
+  agentEnabled: boolean
   onClose(): void
   onPickTask(id: number): void
   onPickProject(id: number | null): void
@@ -77,7 +79,11 @@ export function DemoSearch({ items, projects, onClose, onPickTask, onPickProject
   const inputRef = useRef<HTMLInputElement>(null)
   useEffect(() => inputRef.current?.focus(), [])
 
-  const mode: SearchMode = q.startsWith('#') ? { kind: 'projects' } : q.startsWith('@') ? { kind: 'agent' } : { kind: 'tasks' }
+  // a leading # / @ flips the picker only while that axis exists (Settings):
+  // off, the character is plain search text, exactly the app's rule
+  const mode: SearchMode = q.startsWith('#') && projectsEnabled ? { kind: 'projects' }
+    : q.startsWith('@') && agentEnabled ? { kind: 'agent' }
+    : { kind: 'tasks' }
   const rest = mode.kind === 'tasks' ? q : q.slice(1).trim().toLowerCase()
 
   const rows = useMemo(() => {
@@ -104,11 +110,17 @@ export function DemoSearch({ items, projects, onClose, onPickTask, onPickProject
   }, [q, items, projects, mode.kind])
 
   const h = Math.min(hi, Math.max(rows.length - 1, 0))
+  const searchHint = [
+    projectsEnabled && '# flips to projects',
+    agentEnabled && '@ to agent tasks',
+  ].filter(Boolean).join(', ')
   const placeholder = mode.kind === 'projects'
     ? 'Pick a project to filter the list…'
     : mode.kind === 'agent'
       ? 'Whose tasks?'
-      : 'Search tasks — # flips to projects, @ to agent tasks'
+      : searchHint
+        ? `Search tasks — ${searchHint}`
+        : 'Search tasks'
 
   return (
     <div className="palette-backdrop search-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>

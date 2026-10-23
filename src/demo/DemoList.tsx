@@ -1,15 +1,18 @@
 /* The demo's main view: Notes above the task stack, one capture bar routing
    to three sections, tier dividers labeling the Backlog and the notes. Every
    action the real app offers on tasks and notes works here; reminders are the
-   one deliberate stub (they need real days). Class names and metrics follow
-   the app's own stylesheet. */
+   one deliberate stub (they need real days). The Settings switches ride
+   through `features`: a switched-off axis never renders, never parses —
+   buttons drop out and the remaining digits renumber compactly. Class names
+   and metrics follow the app's own stylesheet. */
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { cloneElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { Features } from './DemoSettings'
 import {
   dayISO, fmtClock, fmtDuration, fmtReminder, projectColor, clipProject, tierRank,
   todayISO, tokenSpans,
   type HideDuration, type Item, type Note, type Project, type Section,
-  type SessionRow, type TokenSurface,
+  type SessionRow, type TagFlags, type TokenSurface,
 } from './model'
 
 export type Pop = { kind: 'project' | 'remind' | 'hide'; on: 'task' | 'note'; id: number } | null
@@ -21,7 +24,10 @@ export interface CaptureHandle {
 }
 
 export interface DemoListProps {
-  // the Tasks feature (Settings): off takes the capture + all three sections
+  // the Settings record — every row renders (and every parser strips) only
+  // what these switches keep on
+  features: Features
+  // the Tasks feature: off takes the capture + all three sections
   tasksArea: boolean
   today: Item[]
   daily: Item[]
@@ -68,6 +74,38 @@ export interface DemoListProps {
 }
 
 export default function DemoList(p: DemoListProps) {
+  const f = p.features
+  // stable per-toggle: the paint hook re-binds on a flags identity change
+  const taskFlags = useMemo(
+    () => ({ projects: f.taskProjects, priorities: f.taskPriorities, agent: f.agent }),
+    [f.taskProjects, f.taskPriorities, f.agent],
+  )
+  const noteCapFlags = useMemo(
+    () => ({ projects: f.noteProjects, priorities: f.notePriorities, journal: f.journal, quotes: f.quotes }),
+    [f.noteProjects, f.notePriorities, f.journal, f.quotes],
+  )
+  // the capture hints teach only the grammar that exists (the app's rule for
+  // its demo hints: a switched-off axis never teaches its token)
+  const taskBits = [
+    f.taskPriorities && '!1',
+    f.taskProjects && '#tag',
+    f.agent && '@',
+  ].filter(Boolean).join(' ')
+  const taskPlaceholder = taskBits
+    ? `Add a task — plain lands in Today · ##d / ##b route · ${taskBits} mark`
+    : 'Add a task — plain lands in Today · ##d / ##b route'
+  const entryBits = [
+    f.journal && '##j',
+    f.quotes && '##q',
+  ].filter(Boolean).join(' / ')
+  const entryHint = entryBits
+    ? ` · ${entryBits} write ${f.journal && f.quotes ? 'a journal line or quote' : f.journal ? 'a journal line' : 'a quote'}`
+    : ''
+  const noteBits = [
+    f.notePriorities && '!1',
+    f.noteProjects && '#tag',
+  ].filter(Boolean).join(' ')
+  const notePlaceholder = `Add a note — Enter saves${noteBits ? ` · ${noteBits} tag it` : ''}${entryHint}`
   return (
     <div className="d-list">
       {/* ---- notes: content, not activity — creating one writes no log ---- */}
@@ -77,12 +115,14 @@ export default function DemoList(p: DemoListProps) {
           <CaptureField
             textarea
             surface="note-capture"
+            flags={noteCapFlags}
             handleRef={p.noteCapRef}
-            placeholder="Add a note — Enter saves · !1 #tag tag it · ##j / ##q write a journal line or quote"
+            placeholder={notePlaceholder}
             onSubmit={p.act.addNote}
           />
           <NoteGroups
             notes={p.notes}
+            features={f}
             projects={p.projects}
             sel={p.sel}
             setSel={p.setSel}
@@ -99,26 +139,27 @@ export default function DemoList(p: DemoListProps) {
           <div className="surface-head tasks-head">Tasks</div>
           <CaptureField
             surface="task-capture"
+            flags={taskFlags}
             handleRef={p.taskCapRef}
-            placeholder="Add a task — plain lands in Today · ##d / ##b route · !1 #tag @ mark"
+            placeholder={taskPlaceholder}
             onSubmit={p.act.addTask}
           />
         </>
       )}
       {p.showToday && <ItemSection
-        name="today" items={p.today} projects={p.projects}
+        name="today" items={p.today} features={f} projects={p.projects}
         activeSession={p.activeSession} nowMs={p.nowMs} totalSecsOf={p.totalSecsOf}
         sel={p.sel} setSel={p.setSel} editingId={p.editingId} setEditingId={p.setEditingId}
         detailsId={p.detailsId} setDetailsId={p.setDetailsId} pop={p.pop} setPop={p.setPop} act={p.act}
       />}
       {p.showDaily && <ItemSection
-        name="daily" items={p.daily} projects={p.projects}
+        name="daily" items={p.daily} features={f} projects={p.projects}
         activeSession={p.activeSession} nowMs={p.nowMs} totalSecsOf={p.totalSecsOf}
         sel={p.sel} setSel={p.setSel} editingId={p.editingId} setEditingId={p.setEditingId}
         detailsId={p.detailsId} setDetailsId={p.setDetailsId} pop={p.pop} setPop={p.setPop} act={p.act}
       />}
       {p.showBacklog && <ItemSection
-        name="backlog" items={p.backlog} projects={p.projects}
+        name="backlog" items={p.backlog} features={f} projects={p.projects}
         activeSession={p.activeSession} nowMs={p.nowMs} totalSecsOf={p.totalSecsOf}
         sel={p.sel} setSel={p.setSel} editingId={p.editingId} setEditingId={p.setEditingId}
         detailsId={p.detailsId} setDetailsId={p.setDetailsId} pop={p.pop} setPop={p.setPop} act={p.act}
@@ -143,10 +184,10 @@ const TOKEN_WORDS: Record<string, string> = {
 
 interface MirrorSeg { raw: string; word?: string; bars?: number; tok?: boolean }
 
-function buildMirror(text: string, surface: TokenSurface): MirrorSeg[] {
+function buildMirror(text: string, surface: TokenSurface, flags?: TagFlags): MirrorSeg[] {
   const segs: MirrorSeg[] = []
   let pos = 0
-  for (const [a, b] of tokenSpans(text, surface)) {
+  for (const [a, b] of tokenSpans(text, surface, flags)) {
     if (a > pos) segs.push({ raw: text.slice(pos, a) })
     const raw = text.slice(a, b)
     if (raw.startsWith('!')) segs.push({ raw, bars: raw === '!0' ? 0 : 4 - Number(raw[1]) })
@@ -196,6 +237,7 @@ function useTokenPaint(
   fieldRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>,
   mirrorRef: React.RefObject<HTMLDivElement | null>,
   layerRef: React.RefObject<HTMLDivElement | null>,
+  flags?: TagFlags,
 ) {
   const paintRef = useRef<() => void>(() => {})
 
@@ -207,7 +249,7 @@ function useTokenPaint(
 
     const paint = () => {
       const text = field.value
-      const segs = buildMirror(text, surface)
+      const segs = buildMirror(text, surface, flags)
       // rebuild the mirror from the live value — the source of truth is the DOM
       mirror.textContent = ''
       segs.forEach((s, i) => {
@@ -301,7 +343,7 @@ function useTokenPaint(
       document.removeEventListener('selectionchange', onSel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [surface, fieldRef, mirrorRef, layerRef])
+  }, [surface, fieldRef, mirrorRef, layerRef, flags])
 
   return paintRef
 }
@@ -309,17 +351,18 @@ function useTokenPaint(
 // Both capture fields and the row editor render through this: uncontrolled
 // field (the DOM holds the value), transparent text, mirror + caret layer
 // painted by the hook.
-function CaptureField({ handleRef, onSubmit, placeholder, textarea, surface }: {
+function CaptureField({ handleRef, onSubmit, placeholder, textarea, surface, flags }: {
   handleRef: React.RefObject<CaptureHandle | null>
   onSubmit(raw: string): void
   placeholder: string
   textarea?: boolean
   surface: TokenSurface
+  flags?: TagFlags
 }) {
   const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null)
   const mirrorRef = useRef<HTMLDivElement>(null)
   const layerRef = useRef<HTMLDivElement>(null)
-  const paint = useTokenPaint(surface, inputRef, mirrorRef, layerRef)
+  const paint = useTokenPaint(surface, inputRef, mirrorRef, layerRef, flags)
 
   useEffect(() => {
     handleRef.current = {
@@ -384,14 +427,22 @@ const noteGroupsOf = (notes: Note[]): Note[][] => {
   return g
 }
 
-function firstProseLine(body: string): string {
+// firstProseLine skips a token-only line only when the axes that would parse
+// it exist — a switched-off axis's tokens are prose and preview like it.
+function firstProseLine(body: string, flags: TagFlags): string {
   const lines = body.split('\n').map((l) => l.trim())
-  const tokenOnly = (l: string) => l.length > 0 && l.split(/\s+/).every((w) => /^(![0-3]|#[\w-]+)$/.test(w))
+  const tokenOnly = (l: string) =>
+    l.length > 0 && l.split(/\s+/).every((w) =>
+      (flags.priorities !== false && /^![0-3]$/.test(w)) ||
+      (flags.projects !== false && /^#[\w-]+$/.test(w)))
   return lines.find((l) => l && !tokenOnly(l)) ?? ''
 }
 
-function NoteGroups({ notes, projects, sel, setSel, pop, setPop, act }: {
+const noteFlagsOf = (f: Features): TagFlags => ({ projects: f.noteProjects, priorities: f.notePriorities })
+
+function NoteGroups({ notes, features, projects, sel, setSel, pop, setPop, act }: {
   notes: Note[]
+  features: Features
   projects: Project[]
   sel: Sel
   setSel(s: Sel): void
@@ -399,6 +450,18 @@ function NoteGroups({ notes, projects, sel, setSel, pop, setPop, act }: {
   setPop(p: Pop): void
   act: DemoListProps['act']
 }) {
+  // tiers off: one flat list in arrival order — the grouping was the tier
+  // signal, so with the axis gone there is nothing to divide
+  if (!features.notePriorities) {
+    return (
+      <div className="d-notes">
+        {notes.map((n) => (
+          <NoteCard key={n.id} note={n} features={features} projects={projects} selected={sel?.kind === 'note' && sel.id === n.id}
+            setSel={setSel} pop={pop} setPop={setPop} act={act} />
+        ))}
+      </div>
+    )
+  }
   const groups = noteGroupsOf(notes)
   const marked = groups.slice(0, 3).some((g) => g.length > 0)
   return (
@@ -412,7 +475,7 @@ function NoteGroups({ notes, projects, sel, setSel, pop, setPop, act }: {
               <div className="tier-divider"><PriorityBars filled={3 - gi} faint /></div>
             )}
             {rows.map((n) => (
-              <NoteCard key={n.id} note={n} projects={projects} selected={sel?.kind === 'note' && sel.id === n.id}
+              <NoteCard key={n.id} note={n} features={features} projects={projects} selected={sel?.kind === 'note' && sel.id === n.id}
                 setSel={setSel} pop={pop} setPop={setPop} act={act} />
             ))}
           </div>
@@ -422,8 +485,9 @@ function NoteGroups({ notes, projects, sel, setSel, pop, setPop, act }: {
   )
 }
 
-function NoteCard({ note, projects, selected, setSel, pop, setPop, act }: {
+function NoteCard({ note, features, projects, selected, setSel, pop, setPop, act }: {
   note: Note
+  features: Features
   projects: Project[]
   selected: boolean
   setSel(s: Sel): void
@@ -434,6 +498,7 @@ function NoteCard({ note, projects, selected, setSel, pop, setPop, act }: {
   const [val, setVal] = useState(note.body)
   const ref = useRef<HTMLTextAreaElement>(null)
   const project = projects.find((pr) => pr.id === note.projectId) ?? null
+  const showProject = features.noteProjects && project != null
 
   // The card keeps a local draft saved (with the footer catch) on blur, the
   // app's debounce-and-flush collapsed to a blur save. When the saved body
@@ -463,8 +528,8 @@ function NoteCard({ note, projects, selected, setSel, pop, setPop, act }: {
     >
       {note.collapsed ? (
         <div className="note-preview">
-          <span className="note-preview-text">{firstProseLine(note.body)}</span>
-          {project && (
+          <span className="note-preview-text">{firstProseLine(note.body, noteFlagsOf(features))}</span>
+          {showProject && (
             <span className="project-label" style={{ color: projectColor(project.id) }} title={`Project: ${project.name}`}>
               {clipProject(project.name)}
             </span>
@@ -482,27 +547,30 @@ function NoteCard({ note, projects, selected, setSel, pop, setPop, act }: {
         />
       )}
       <div className="note-actions">
-        {note.hidden ? (
-          <>
-            <button className="item-action" data-kb="3" title="Unhide" onClick={(e) => { e.stopPropagation(); act.noteUnhide(note.id) }}>↺</button>
-            <button className="item-action danger" data-kb="4" title="Delete" onClick={(e) => { e.stopPropagation(); act.noteDelete(note.id) }}>×</button>
-          </>
-        ) : (
-          <>
-            <button className="item-action" data-kb="1" title={note.collapsed ? 'Expand' : 'Collapse'}
-              onClick={(e) => { e.stopPropagation(); if (val !== note.body) act.noteBody(note.id, val); act.noteCollapse(note.id) }}>
-              <Chevron up={note.collapsed} />
+        {/* the cluster is built, then numbered 1..n — a switched-off axis
+            drops its button and the digits renumber compactly, the app's
+            digit rule */}
+        {((note.hidden ? [
+          <button key="unhide" className="item-action" title="Unhide" onClick={(e) => { e.stopPropagation(); act.noteUnhide(note.id) }}>↺</button>,
+          <button key="del" className="item-action danger" title="Delete" onClick={(e) => { e.stopPropagation(); act.noteDelete(note.id) }}>×</button>,
+        ] : [
+          <button key="fold" className="item-action" title={note.collapsed ? 'Expand' : 'Collapse'}
+            onClick={(e) => { e.stopPropagation(); if (val !== note.body) act.noteBody(note.id, val); act.noteCollapse(note.id) }}>
+            <Chevron up={note.collapsed} />
+          </button>,
+          features.noteDownload && note.body.trim() && (
+            <button key="dl" className="item-action" title="Download .txt"
+              onClick={(e) => { e.stopPropagation(); flush(); act.noteDownload(note.id) }}>
+              <TrayIcon />
             </button>
-            {note.body.trim() && (
-              <button className="item-action" data-kb="2" title="Download .txt"
-                onClick={(e) => { e.stopPropagation(); flush(); act.noteDownload(note.id) }}>
-                <TrayIcon />
-              </button>
-            )}
-            <button className="item-action" data-kb="3" title="Hide"
+          ),
+          features.noteHide && (
+            <button key="hide" className="item-action" title="Hide"
               onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'hide' && pop.on === 'note' && pop.id === note.id ? null : { kind: 'hide', on: 'note', id: note.id }) }}>◐</button>
-            <button className="item-action danger" data-kb="4" title="Delete" onClick={(e) => { e.stopPropagation(); act.noteDelete(note.id) }}>×</button>
-          </>
+          ),
+          <button key="del" className="item-action danger" title="Delete" onClick={(e) => { e.stopPropagation(); act.noteDelete(note.id) }}>×</button>,
+        ]).filter(Boolean) as React.ReactElement<any>[]).map((b, i) =>
+          cloneElement(b, { 'data-kb': i + 1 }),
         )}
       </div>
       {pop && pop.on === 'note' && pop.id === note.id && pop.kind === 'hide' && (
@@ -514,9 +582,10 @@ function NoteCard({ note, projects, selected, setSel, pop, setPop, act }: {
 
 /* ---- task sections ---------------------------------------------------------- */
 
-function ItemSection({ name, items, projects, activeSession, nowMs, totalSecsOf, sel, setSel, editingId, setEditingId, detailsId, setDetailsId, pop, setPop, act }: {
+function ItemSection({ name, items, features, projects, activeSession, nowMs, totalSecsOf, sel, setSel, editingId, setEditingId, detailsId, setDetailsId, pop, setPop, act }: {
   name: Section
   items: Item[]
+  features: Features
   projects: Project[]
   activeSession: SessionRow | null
   nowMs: number
@@ -541,13 +610,13 @@ function ItemSection({ name, items, projects, activeSession, nowMs, totalSecsOf,
         const newTier = backlog && (!prev || tierRank(prev.priority) !== tierRank(item.priority))
         return (
           <div key={item.id}>
-            {newTier && (
+            {features.taskPriorities && newTier && (
               <div className="tier-divider">
                 <PriorityBars filled={item.priority == null ? 0 : 4 - item.priority} faint />
               </div>
             )}
             <TaskRow
-              item={item} projects={projects}
+              item={item} features={features} projects={projects}
               activeSession={activeSession} nowMs={nowMs} totalSecsOf={totalSecsOf}
               selected={sel?.kind === 'task' && sel.id === item.id}
               setSel={setSel}
@@ -557,7 +626,7 @@ function ItemSection({ name, items, projects, activeSession, nowMs, totalSecsOf,
               setDetailsId={setDetailsId}
               pop={pop} setPop={setPop} act={act}
             />
-            {detailsId === item.id && (
+            {features.taskDetails && detailsId === item.id && (
               <DetailsBody
                 initial={item.details}
                 onCommit={(body) => act.setDetails(item.id, body)}
@@ -571,8 +640,9 @@ function ItemSection({ name, items, projects, activeSession, nowMs, totalSecsOf,
   )
 }
 
-function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, setSel, editing, setEditingId, detailsOpen, setDetailsId, pop, setPop, act }: {
+function TaskRow({ item, features, projects, activeSession, nowMs, totalSecsOf, selected, setSel, editing, setEditingId, detailsOpen, setDetailsId, pop, setPop, act }: {
   item: Item
+  features: Features
   projects: Project[]
   activeSession: SessionRow | null
   nowMs: number
@@ -593,6 +663,10 @@ function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, 
   const elapsed = isTiming && activeSession ? (nowMs - activeSession.startedAt) / 1000 : 0
   const total = totalSecsOf(item.id)
   const startEdit = () => setEditingId(item.id)
+  const isBacklog = item.section === 'backlog'
+  // the pause/hide verb belongs to its own axis: Daily pauses, Today and
+  // Backlog hide — each gated on its own Settings switch
+  const canStash = item.section === 'daily' ? features.dailyPause : features.taskHide
 
   return (
     <>
@@ -613,6 +687,7 @@ function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, 
         {editing ? (
           <EditInput
             initial={item.text}
+            flags={{ projects: features.taskProjects, priorities: features.taskPriorities, agent: features.agent }}
             onCommit={(raw) => { act.commitEdit(item, raw); setEditingId(null) }}
           />
         ) : (
@@ -621,16 +696,16 @@ function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, 
         {!editing && (
           <div className="item-meta">
             {item.hidden && <span className="hidden-chip">◐ {item.hiddenUntil ? `until ${fmtReminder(item.hiddenUntil)}` : 'forever'}</span>}
-            {!isTiming && total > 0 && <span className="time-label" title="Time tracked">⏱ {fmtDuration(total)}</span>}
-            {item.remindAt && <span className="reminder-chip" title={`Reminds on ${item.remindAt}`}>→ {fmtReminder(item.remindAt)}</span>}
+            {features.timer && !isTiming && total > 0 && <span className="time-label" title="Time tracked">⏱ {fmtDuration(total)}</span>}
+            {features.reminders && item.remindAt && <span className="reminder-chip" title={`Reminds on ${item.remindAt}`}>→ {fmtReminder(item.remindAt)}</span>}
             <span className={`meta-priority${isTiming ? ' timing' : ''}`}>
               {isTiming ? <span className="timer-live" title="Elapsed">{fmtClock(elapsed)}</span>
-                : item.section !== 'backlog' && item.priority != null ? <PriorityBars filled={4 - item.priority} />
+                : features.taskPriorities && !isBacklog && item.priority != null ? <PriorityBars filled={4 - item.priority} />
                 : null}
             </span>
-            <span className="meta-agent">{item.agent && <AgentBadge />}</span>
+            <span className="meta-agent">{features.agent && item.agent && <AgentBadge />}</span>
             <span className="meta-project">
-              {project && (
+              {features.taskProjects && project && (
                 <span className="project-label" style={{ color: projectColor(project.id) }} title={`Project: ${project.name}`}>
                   {clipProject(project.name)}
                 </span>
@@ -641,36 +716,44 @@ function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, 
         {!editing && (
           /* The cluster flows inline on desktop; on phones (≤640px) it floats
              over the row's right edge on hover/focus instead of reserving
-             width — there is no room for a dead strip there. */
+             width — there is no room for a dead strip there. Built, filtered
+             by the axes that exist, then numbered 1..n — the app's compact
+             digit rule. */
           <span className="item-actions">
-            {isTiming ? (
-              <button className="item-action" data-kb="1" title="Stop timer" onClick={(e) => { e.stopPropagation(); act.toggleTimer(item) }}>⏸</button>
-            ) : item.hidden ? null : item.section === 'backlog' ? (
-              <button className="item-action" data-kb="1" title="Send to Today" onClick={(e) => { e.stopPropagation(); act.promote(item) }}><Chevron up /></button>
-            ) : (
-              <button className="item-action" data-kb="1" title="Start timer" onClick={(e) => { e.stopPropagation(); act.toggleTimer(item) }}>▶</button>
-            )}
-            {item.hidden ? (
-              <>
-                <button className="item-action" data-kb="4" title="Unhide" onClick={(e) => { e.stopPropagation(); act.unhide(item.id) }}>↺</button>
-                <button className="item-action danger" data-kb="6" title="Delete" onClick={(e) => { e.stopPropagation(); act.del(item) }}>×</button>
-              </>
-            ) : (
-              <>
-                <button className={`item-action${pop?.kind === 'project' && pop.on === 'task' && pop.id === item.id ? ' active' : ''}`} data-kb="2" title="Project"
+            {((item.hidden ? [
+              <button key="unhide" className="item-action" title="Unhide" onClick={(e) => { e.stopPropagation(); act.unhide(item.id) }}>↺</button>,
+              <button key="del" className="item-action danger" title="Delete" onClick={(e) => { e.stopPropagation(); act.del(item) }}>×</button>,
+            ] : [
+              isTiming ? (
+                <button key="pause" className="item-action" title="Stop timer" onClick={(e) => { e.stopPropagation(); act.toggleTimer(item) }}>⏸</button>
+              ) : isBacklog ? (
+                <button key="promote" className="item-action" title="Send to Today" onClick={(e) => { e.stopPropagation(); act.promote(item) }}><Chevron up /></button>
+              ) : features.timer ? (
+                <button key="start" className="item-action" title="Start timer" onClick={(e) => { e.stopPropagation(); act.toggleTimer(item) }}>▶</button>
+              ) : null,
+              features.taskProjects && (
+                <button key="proj" className={`item-action${pop?.kind === 'project' && pop.on === 'task' && pop.id === item.id ? ' active' : ''}`} title="Project"
                   onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'project' && pop.on === 'task' && pop.id === item.id ? null : { kind: 'project', on: 'task', id: item.id }) }}>#</button>
-                <button className={`item-action${pop?.kind === 'remind' && pop.on === 'task' && pop.id === item.id ? ' active' : ''}`} data-kb="3" title="Remind me"
+              ),
+              features.reminders && (
+                <button key="remind" className={`item-action${pop?.kind === 'remind' && pop.on === 'task' && pop.id === item.id ? ' active' : ''}`} title="Remind me"
                   onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'remind' && pop.on === 'task' && pop.id === item.id ? null : { kind: 'remind', on: 'task', id: item.id }) }}>◷</button>
-                <button className={`item-action${pop?.kind === 'hide' && pop.on === 'task' && pop.id === item.id ? ' active' : ''}`} data-kb="4"
+              ),
+              canStash && (
+                <button key="stash" className={`item-action${pop?.kind === 'hide' && pop.on === 'task' && pop.id === item.id ? ' active' : ''}`}
                   title={item.section === 'daily' ? 'Pause' : 'Hide'}
                   onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'hide' && pop.on === 'task' && pop.id === item.id ? null : { kind: 'hide', on: 'task', id: item.id }) }}>◐</button>
-                <button className={`item-action${detailsOpen ? ' active' : ''}`} data-kb="5"
+              ),
+              features.taskDetails && (
+                <button key="details" className={`item-action${detailsOpen ? ' active' : ''}`}
                   title={detailsOpen ? 'Collapse details' : item.details ? 'Expand details' : 'Add details'}
                   onClick={(e) => { e.stopPropagation(); setDetailsId(detailsOpen ? null : item.id) }}>
                   {detailsOpen ? <Chevron up /> : item.details ? <Chevron /> : '⋯'}
                 </button>
-                <button className="item-action danger" data-kb="6" title="Delete" onClick={(e) => { e.stopPropagation(); act.del(item) }}>×</button>
-              </>
+              ),
+              <button key="del" className="item-action danger" title="Delete" onClick={(e) => { e.stopPropagation(); act.del(item) }}>×</button>,
+            ]).filter(Boolean) as React.ReactElement<any>[]).map((b, i) =>
+              cloneElement(b, { 'data-kb': i + 1 }),
             )}
           </span>
         )}
@@ -697,14 +780,15 @@ function TaskRow({ item, projects, activeSession, nowMs, totalSecsOf, selected, 
   )
 }
 
-function EditInput({ initial, onCommit }: {
+function EditInput({ initial, flags, onCommit }: {
   initial: string
+  flags?: TagFlags
   onCommit(raw: string): void
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const mirrorRef = useRef<HTMLDivElement>(null)
   const layerRef = useRef<HTMLDivElement>(null)
-  const paint = useTokenPaint('task-edit', ref, mirrorRef, layerRef)
+  const paint = useTokenPaint('task-edit', ref, mirrorRef, layerRef, flags)
   useEffect(() => {
     const el = ref.current
     if (!el) return

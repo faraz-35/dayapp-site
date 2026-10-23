@@ -1426,10 +1426,14 @@ h2 {
 }
 
 /* ---- settings page (⌘P → Open Settings, or the gear) ------------------------ */
-/* The app's SettingsView language at demo scope: group cards, real switches,
-   the Card/Bare seg with its fill swatch, counts in the card titles, and
-   section rows that go inert while Tasks is off. The site has no global
-   button reset, so .set-seg button carries the bare treatment. */
+/* The app's SettingsView structure at demo scope: a tab bar picks one pane
+   (Features / Appearance / Header / Views), Features lays the Tasks · Notes
+   surface cards side by side with each existence master riding its card
+   title, real switches and segmented controls instead of ON/OFF text, themes
+   as ladder cards, and the Focus lens as a view card. Rows are
+   dependency-aware: a feature that's off sends its dependents inert with a
+   hint saying why. The site has no global button reset, so the button rules
+   carry the bare treatment. */
 
 .settings {
   padding: 4px 4px 12px;
@@ -1437,6 +1441,87 @@ h2 {
   flex-direction: column;
   gap: 12px;
 }
+
+/* The tab bar — the seg's language full width, one pane at a time (Features /
+   Appearance / Header / Views). Static here: the demo window body is short
+   and, embedded in the page, the scrollport is the page itself. In
+   fullscreen the window body is the one scroll container, so there it pins
+   under the window header like the app's bar. */
+.settings-tabs {
+  display: flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.settings-tabs button {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.08s ease, background 0.08s ease;
+}
+.settings-tabs button + button { border-left: 1px solid var(--border); }
+.settings-tabs button:hover { color: var(--text); background: var(--bg-hover); }
+.settings-tabs button.on { color: var(--accent); background: rgba(var(--accent-rgb), 0.08); }
+.demo-root.full .settings-tabs { position: sticky; top: 0; z-index: 2; }
+
+/* The Features pane: the surface cards side by side (the demo has two —
+   Tasks · Notes; the app's grid carries Goals third). minmax(0, 1fr) is
+   load-bearing: plain 1fr tracks carry an auto minimum, and the rows' nowrap
+   hints then push the card past the window edge instead of ellipsizing. */
+.set-grid3 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+.set-grid3 > .an-card { min-width: 0; }
+@media (max-width: 759.9px) {
+  .set-grid3 { grid-template-columns: 1fr; }
+}
+
+/* A surface card's existence master rides the title line itself — the whole
+   line is the click target, the box is the state. */
+.an-card-title.toggable { align-items: center; cursor: pointer; }
+.an-card-title.toggable:hover .set-sw:not(.on) { border-color: var(--text-dim); }
+
+/* View rows: the row language, not boxes — bare at rest, hover tint, an
+   accent wash while the lens is Active. Name + one-line summary, Enter/Active
+   state at the right. */
+.set-views { display: flex; flex-direction: column; gap: 2px; }
+.set-view-card {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  transition: background 0.08s ease;
+}
+.set-view-card:hover { background: var(--bg-hover); }
+.set-view-card.on { background: rgba(var(--accent-rgb), 0.07); }
+.set-view-text { flex: 1; min-width: 0; }
+.set-view-name { display: block; font-size: 13px; }
+.set-view-sum {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .set-count {
   font-weight: 500;
   letter-spacing: 0.06em;
