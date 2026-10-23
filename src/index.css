@@ -521,6 +521,30 @@ h2 {
 }
 .tok-mirror .tok { color: var(--accent); }
 
+/* The app's rotating capture hint (TokenField's demoExamples): an example
+   line under the empty field — prose in the quietest shade, the raw sigils
+   (`##t`, `!1`) in the dull accent. Same metrics as the mirror, so it sits
+   exactly where typed text would land. Each swap remounts the layer (keyed)
+   and the new line fades in over ~0.8s with a 2px rise — slow and soft, a
+   breath, not a blink. */
+.tok-field .token-ph {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre;
+  animation: ph-in 0.8s ease-out;
+}
+.tok-field .token-ph.multi { white-space: pre-wrap; word-break: break-word; }
+@keyframes ph-in {
+  from { opacity: 0; transform: translateY(2px); }
+}
+.tok-field .token-ph .tok { color: rgba(var(--accent-rgb), 0.5); }
+
 /* ---- item rows ------------------------------------------------------------ */
 
 .item {

@@ -84,28 +84,27 @@ export default function DemoList(p: DemoListProps) {
     () => ({ projects: f.noteProjects, priorities: f.notePriorities, journal: f.journal, quotes: f.quotes }),
     [f.noteProjects, f.notePriorities, f.journal, f.quotes],
   )
-  // the capture hints teach only the grammar that exists (the app's rule for
-  // its demo hints: a switched-off axis never teaches its token)
-  const taskBits = [
-    f.taskPriorities && '!1',
-    f.taskProjects && '#tag',
-    f.agent && '@',
-  ].filter(Boolean).join(' ')
-  const taskPlaceholder = taskBits
-    ? `Add a task — plain lands in Today · ##d / ##b route · ${taskBits} mark`
-    : 'Add a task — plain lands in Today · ##d / ##b route'
-  const entryBits = [
-    f.journal && '##j',
-    f.quotes && '##q',
-  ].filter(Boolean).join(' / ')
-  const entryHint = entryBits
-    ? ` · ${entryBits} write ${f.journal && f.quotes ? 'a journal line or quote' : f.journal ? 'a journal line' : 'a quote'}`
-    : ''
-  const noteBits = [
-    f.notePriorities && '!1',
-    f.noteProjects && '#tag',
-  ].filter(Boolean).join(' ')
-  const notePlaceholder = `Add a note — Enter saves${noteBits ? ` · ${noteBits} tag it` : ''}${entryHint}`
+  // The capture hints teach only the grammar that exists — each example is
+  // gated on the feature that makes its tokens real (an off axis never
+  // teaches its token; the coloring wouldn't either). The route token LEADS —
+  // mid-line ##t is prose, so a trailing one would teach a line that never
+  // routes. One hint is plain: no token = Today, the default destination.
+  // (The app's demo-mode pools, verbatim at demo scope.)
+  const taskExamples = useMemo(() => [
+    ...(f.today ? ['Call the bank'] : []),
+    ...(f.today && f.taskPriorities ? ['##t Reply to Alex about the invoice !1'] : []),
+    ...(f.daily ? ['##d Water the plants'] : []),
+    ...(f.backlog ? ['##b Read that paper sometime'] : []),
+    ...(f.backlog && f.taskProjects ? ['##b Book the dentist #health'] : []),
+    ...(f.today && f.agent ? ['##t Prep the demo script @'] : []),
+  ], [f.today, f.daily, f.backlog, f.taskPriorities, f.taskProjects, f.agent])
+  const noteExamples = useMemo(() => [
+    ...(f.journal ? ['##j Shipped the demo build — felt easy'] : []),
+    ...(f.quotes ? ['##q Simplicity is the ultimate sophistication'] : []),
+    ...(f.notePriorities ? ['Trip ideas: coast or mountains !2'] : []),
+    ...(f.noteProjects ? ['Call the bank about the card #admin'] : []),
+    'Meeting notes: keep the scope small',
+  ], [f.journal, f.quotes, f.notePriorities, f.noteProjects])
   return (
     <div className="d-list">
       {/* ---- notes: content, not activity — creating one writes no log ---- */}
@@ -116,8 +115,8 @@ export default function DemoList(p: DemoListProps) {
             textarea
             surface="note-capture"
             flags={noteCapFlags}
+            demoExamples={noteExamples}
             handleRef={p.noteCapRef}
-            placeholder={notePlaceholder}
             onSubmit={p.act.addNote}
           />
           <NoteGroups
@@ -140,8 +139,8 @@ export default function DemoList(p: DemoListProps) {
           <CaptureField
             surface="task-capture"
             flags={taskFlags}
+            demoExamples={taskExamples}
             handleRef={p.taskCapRef}
-            placeholder={taskPlaceholder}
             onSubmit={p.act.addTask}
           />
         </>
@@ -350,19 +349,45 @@ function useTokenPaint(
 
 // Both capture fields and the row editor render through this: uncontrolled
 // field (the DOM holds the value), transparent text, mirror + caret layer
-// painted by the hook.
-function CaptureField({ handleRef, onSubmit, placeholder, textarea, surface, flags }: {
+// painted by the hook. The capture fields also carry the app's demoExamples:
+// rotating example lines while the field sits empty (the real app's demo
+// mode — the static placeholder is gone).
+function CaptureField({ handleRef, onSubmit, textarea, surface, flags, demoExamples }: {
   handleRef: React.RefObject<CaptureHandle | null>
   onSubmit(raw: string): void
-  placeholder: string
   textarea?: boolean
   surface: TokenSurface
   flags?: TagFlags
+  demoExamples?: readonly string[]
 }) {
   const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null)
   const mirrorRef = useRef<HTMLDivElement>(null)
   const layerRef = useRef<HTMLDivElement>(null)
   const paint = useTokenPaint(surface, inputRef, mirrorRef, layerRef, flags)
+
+  // The hint rotation, the app's TokenField: the example index steps roughly
+  // every 6.5s while the field sits empty — each wait jittered ±0.7s so the
+  // swaps never land on a metronome beat — and the keyed layer remounts per
+  // step so the new line fades in slowly. The chain re-arms from a timeout,
+  // not an interval, so the jitter is per-swap; the effect keys off the
+  // joined list, not the array identity, so a parent render never resets the
+  // clock.
+  const [phIdx, setPhIdx] = useState(0)
+  const [phOn, setPhOn] = useState(true)
+  const phText = demoExamples?.length ? demoExamples[phIdx % demoExamples.length] : undefined
+  const phKey = demoExamples?.join('\n') ?? ''
+  useEffect(() => {
+    if (!phOn || !demoExamples || demoExamples.length < 2) return
+    const wait = () => 6500 + (Math.random() * 2 - 1) * 700
+    let id: ReturnType<typeof setTimeout>
+    const step = () => {
+      setPhIdx((i) => (i + 1) % demoExamples.length)
+      id = setTimeout(step, wait())
+    }
+    id = setTimeout(step, wait())
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phOn, phKey])
 
   useEffect(() => {
     handleRef.current = {
@@ -372,6 +397,7 @@ function CaptureField({ handleRef, onSubmit, placeholder, textarea, surface, fla
         el.value = v
         el.focus()
         el.setSelectionRange(el.value.length, el.value.length)
+        setPhOn(el.value.length === 0)
         paint.current()
       },
       focus: () => inputRef.current?.focus(),
@@ -385,24 +411,31 @@ function CaptureField({ handleRef, onSubmit, placeholder, textarea, surface, fla
     if (!el.value.trim()) return
     onSubmit(el.value)
     el.value = ''
+    setPhOn(true)
     paint.current()
   }
+
+  const trackEmpty = (el: HTMLInputElement | HTMLTextAreaElement) => setPhOn(el.value.length === 0)
 
   return (
     <form className="capture" onSubmit={(e) => { e.preventDefault(); submit() }}>
       <div className="tok-field">
+        {phOn && phText && (
+          <div className={'token-ph' + (textarea ? ' multi' : '')} aria-hidden="true" key={phIdx}>
+            <PhLine text={phText} surface={surface} flags={flags} />
+          </div>
+        )}
         {textarea ? (
           <textarea
             ref={inputRef as React.RefObject<HTMLTextAreaElement>}
             rows={1}
-            placeholder={placeholder}
-            onInput={(e) => autosize(e.currentTarget)}
+            onInput={(e) => { autosize(e.currentTarget); trackEmpty(e.currentTarget) }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}
           />
         ) : (
           <input
             ref={inputRef as React.RefObject<HTMLInputElement>}
-            placeholder={placeholder}
+            onInput={(e) => trackEmpty(e.currentTarget)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
           />
         )}
@@ -411,6 +444,22 @@ function CaptureField({ handleRef, onSubmit, placeholder, textarea, surface, fla
       </div>
     </form>
   )
+}
+
+// The hint line's coloring: raw sigils in the dull accent, prose in the
+// quietest shade — matched against the same surface + flags the parsers use,
+// so a token colors exactly when the field would parse it.
+function PhLine({ text, surface, flags }: { text: string; surface: TokenSurface; flags?: TagFlags }) {
+  const spans = tokenSpans(text, surface, flags)
+  const out: React.ReactNode[] = []
+  let pos = 0
+  spans.forEach(([a, b], i) => {
+    if (a > pos) out.push(<span key={`p${i}`}>{text.slice(pos, a)}</span>)
+    out.push(<span key={`t${i}`} className="tok">{text.slice(a, b)}</span>)
+    pos = b
+  })
+  if (pos < text.length) out.push(<span key="tail">{text.slice(pos)}</span>)
+  return <>{out}</>
 }
 
 function autosize(el: HTMLTextAreaElement) {
