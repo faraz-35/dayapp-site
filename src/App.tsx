@@ -102,7 +102,9 @@ function useGitHubStars(): number | null {
 function StarButton() {
   const stars = useGitHubStars()
   return (
-    <a className="btn-star" href={GITHUB} title="Star DayApp on GitHub">
+    // new tab — the visitor leaves the pitch page for GitHub and should come
+    // back to it, not lose it
+    <a className="btn-star" href={GITHUB} target="_blank" rel="noopener noreferrer" title="Star DayApp on GitHub">
       {stars != null && (
         <span className="star-count"><StarIcon /><span>{stars}</span></span>
       )}

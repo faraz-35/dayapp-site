@@ -476,9 +476,9 @@ export function makeSeed(): Seed {
     if (rnd() < 0.3) log('fell to backlog', DONE_POOL[Math.floor(rnd() * DONE_POOL.length)][0], null, k, 22, 30)
   }
 
-  // Time already tracked on the live rows.
-  sessions.push({ id: ++sid, itemId: 1, itemText: 'Review PR #214 — search ranking tweak', startedAt: at(1, 9, 0), endedAt: at(1, 9, 45), secs: 2700 })
-  sessions.push({ id: ++sid, itemId: 1, itemText: 'Review PR #214 — search ranking tweak', startedAt: at(0, 9, 14), endedAt: at(0, 9, 41), secs: 1620 })
+  // Time already tracked on the live rows — deliberately none on the Today
+  // rows: an unfresh ⏱ total on the first task a visitor reads reads as
+  // clutter, and a fresh visitor's day hasn't earned time yet.
   sessions.push({ id: ++sid, itemId: 9, itemText: 'Renew meridian SSL certificate', startedAt: at(8, 11, 0), endedAt: at(8, 11, 15), secs: 900 })
 
   // Today, so far.
