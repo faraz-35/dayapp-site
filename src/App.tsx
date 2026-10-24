@@ -259,29 +259,29 @@ const FEATURES: { label: string; title: string; body: ReactNode }[] = [
     ),
   },
   {
-    label: 'input',
-    title: 'Organize as you type',
-    body: (
-      <>
-        Type <code>!1</code> to make something high priority, <code>#work</code> to file it under a
-        project, <code>@</code> to hand it to your AI agent. No menus, no forms.
-      </>
-    ),
-  },
-  {
-    label: 'journal',
-    title: 'An automatic journal',
-    body: 'Everything you add, finish or move is logged with its time, automatically. So “what did I do this week?” is already answered.',
-  },
-  {
-    label: 'timer',
-    title: 'A timer on every task',
-    body: 'Start one to see how long things really take. Time adds up per task and per day — and it keeps running if you close the app.',
+    label: 'goals',
+    title: 'Goals, not just tasks',
+    body: 'Write down where you’re headed — short term, long term, or timeless. Goals sit at the top of the app, so your daily list always has its why.',
   },
   {
     label: 'analytics',
     title: 'See what you did',
     body: 'An analytics page shows what you completed last week or last month, your streak, missed habits, and where your time went.',
+  },
+  {
+    label: 'journal',
+    title: 'A one-line journal',
+    body: (
+      <>
+        Type <code>##j</code> before a line in the notes bar and it’s saved as a journal entry with
+        its date. The Journal page keeps every entry so you can read them back later.
+      </>
+    ),
+  },
+  {
+    label: 'settings',
+    title: 'Make it yours',
+    body: 'Every feature is a switch in Settings — timer, journal, priorities, themes. The app starts minimal, and you turn on only what you use.',
   },
 ]
 
