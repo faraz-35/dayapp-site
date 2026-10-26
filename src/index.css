@@ -222,9 +222,6 @@ h2 {
 
 .demo-section .wrap { padding-top: 48px; padding-bottom: 48px; }
 
-/* the demo runs 30% wider than the page's 1080px column — the window is the
-   page's product, it earns the room where the screen has it */
-.demo-section .wrap { max-width: 1404px; }
 
 .demo-section h2 { margin-bottom: 24px; }
 
@@ -251,7 +248,7 @@ h2 {
   font-size: 13px;
 }
 
-.win-body { min-height: 540px; }
+.win-body { min-height: 702px; }
 
 .win-header {
   position: relative;
