@@ -7,13 +7,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  fmtClock, hideUntil, makeSeed, openSession, parseEntryCapture, parseTags,
+  fmtClock, hideUntil, makeSeed, openSession, parseEntryCapture, parseGoalTags, parseTags,
   parseTaskCapture, splitNoteFooter, tierRank, todayISO, totalSecs as sumSecs,
-  type ActionRow, type ActionVerb, type EntryRow, type HideDuration, type Item,
+  type ActionRow, type ActionVerb, type EntryRow, type GoalRow, type HideDuration, type Item,
   type Note, type Priority, type Project, type Seed,
 } from './model'
 import { MoonIcon, SunIcon, THEMES, applyTheme, systemThemeId, themeById, themeIsLight, themeModeSlot } from '../themes'
 import DemoList, { type CaptureHandle, type Pop, type Sel } from './DemoList'
+import DemoGoals, { type GoalAct } from './DemoGoals'
 import DemoAnalytics from './DemoAnalytics'
 import DemoEntries from './DemoEntries'
 import DemoSettings, { type Features, type FeatureKey, type HeaderBtn, type HeaderBtns } from './DemoSettings'
@@ -25,7 +26,7 @@ const VIEW_TITLES: Record<View, string> = {
   list: 'Live @ Demo', analytics: 'Analytics', journal: 'Journal', quotes: 'Quotes', settings: 'Settings',
 }
 
-const ADDRESS_KEYS = new Set(['n', 't', 'd', 'b'])
+const ADDRESS_KEYS = new Set(['n', 't', 'd', 'b', 'g'])
 
 export default function DemoApp() {
   // The window's theme is its own — session-only like every demo setting,
@@ -46,6 +47,7 @@ export default function DemoApp() {
   const [seed0] = useState<Seed>(makeSeed)
   const [items, setItems] = useState(seed0.items)
   const [notes, setNotes] = useState(seed0.notes)
+  const [goals, setGoals] = useState(seed0.goals)
   const [projects, setProjects] = useState(seed0.projects)
   const [actions, setActions] = useState(seed0.actions)
   const [sessions, setSessions] = useState(seed0.sessions)
@@ -65,12 +67,14 @@ export default function DemoApp() {
   const [hiddenPriorities, setHiddenPriorities] = useState<number[]>([])
   const [showHiddenTasks, setShowHiddenTasks] = useState(false)
   const [showHiddenNotes, setShowHiddenNotes] = useState(false)
+  const [showPausedGoals, setShowPausedGoals] = useState(false)
   const [agentFilter, setAgentFilter] = useState<null | 'agent' | 'my'>(null)
   const [projectFilter, setProjectFilter] = useState<number | null>(null)
 
   // the layout toggles (⌘P) + Focus Mode, the app's lens: P1 notes only,
   // Today/Daily and P1 Backlog only — it composes, never mutates
   const [showNotes, setShowNotes] = useState(true)
+  const [showGoals, setShowGoals] = useState(true)
   const [showToday, setShowToday] = useState(true)
   const [showDaily, setShowDaily] = useState(true)
   const [showBacklog, setShowBacklog] = useState(true)
@@ -78,10 +82,12 @@ export default function DemoApp() {
 
   // the header's ◐ flips every archive axis that exists, together — the
   // app's one-button reveal
-  const anyReveal = showHiddenTasks || showHiddenNotes
+  const anyReveal = showHiddenTasks || showHiddenNotes || showPausedGoals
   const toggleHidden = () => {
-    setShowHiddenTasks(!anyReveal && features.taskHide)
-    setShowHiddenNotes(!anyReveal && features.noteHide)
+    const next = !anyReveal
+    setShowHiddenTasks(next && features.taskHide)
+    setShowHiddenNotes(next && features.noteHide)
+    setShowPausedGoals(next && features.goals && features.goalPause)
   }
 
   // the settings page (⌘P → Open Settings, or the gear): existence (Features),
@@ -95,6 +101,7 @@ export default function DemoApp() {
     timer: false, reminders: false, taskProjects: false, taskHide: false, dailyPause: false,
     taskDetails: false, taskPriorities: false, agent: false,
     notes: true, noteProjects: false, notePriorities: false, noteHide: false, noteDownload: true,
+    goals: false, goalTimeframes: false, goalProjects: false, goalPause: false,
     journal: false, quotes: false,
   })
   const [notesCard, setNotesCard] = useState(false)
@@ -117,6 +124,7 @@ export default function DemoApp() {
   const bodyRef = useRef<HTMLDivElement>(null)
   const taskCapRef = useRef<CaptureHandle | null>(null)
   const noteCapRef = useRef<CaptureHandle | null>(null)
+  const goalCapRef = useRef<CaptureHandle | null>(null)
 
   const activeSession = openSession(sessions)
 
@@ -155,6 +163,24 @@ export default function DemoApp() {
     (!focusMode || n.priority === 1),
   ) : [], [notes, showHiddenNotes, projectFilter, focusMode, features])
 
+  // the Goals surface reads its own reveal (paused rows) — the project filter
+  // narrows it too; the Focus lens hides the layer entirely (the app's lens
+  // is stricter than the default working view)
+  const goalsVisible = useMemo(() => features.goals ? goals.filter((g) =>
+    (g.hidden ? showPausedGoals : true) &&
+    (projectFilter == null || g.projectId === projectFilter) &&
+    !focusMode,
+  ) : [], [goals, showPausedGoals, projectFilter, focusMode, features])
+
+  // the same rows in render order — the g<n> addresses walk the DOM
+  const goalAddressList = useMemo(() => {
+    const order: Record<GoalRow['horizon'], number> = { timeless: 0, long: 1, short: 2 }
+    const active = goalsVisible.filter((g) => g.status === 'active')
+      .sort((a, b) => (features.goalTimeframes ? order[a.horizon] - order[b.horizon] : 0) || a.id - b.id)
+    const done = goalsVisible.filter((g) => g.status === 'achieved')
+    return [...active, ...done]
+  }, [goalsVisible, features.goalTimeframes])
+
   /* ---- the live timer re-renders the demo once a second — only while a
           session is open and the tab is visible ---- */
   useEffect(() => {
@@ -176,6 +202,8 @@ export default function DemoApp() {
       ? { ...x, hidden: false, hiddenUntil: null } : x)))
     setNotes((ns) => ns.map((n) => (n.hidden && n.hiddenUntil != null && n.hiddenUntil < today
       ? { ...n, hidden: false, hiddenUntil: null } : n)))
+    setGoals((gs) => gs.map((g) => (g.hidden && g.hiddenUntil != null && g.hiddenUntil < today
+      ? { ...g, hidden: false, hiddenUntil: null } : g)))
   }, [])
 
   /* ---- fullscreen (an overlay, not the Fullscreen API) + engagement ---- */
@@ -202,10 +230,10 @@ export default function DemoApp() {
   const taskFlags = { projects: features.taskProjects, priorities: features.taskPriorities, agent: features.agent }
   const noteFlags = { projects: features.noteProjects, priorities: features.notePriorities }
 
-  const logAction = (verb: ActionVerb, text: string, itemId: number | null, projectId: number | null, priority: Priority) => {
+  const logAction = (verb: ActionVerb, text: string, itemId: number | null, projectId: number | null, priority: Priority, goalId: number | null = null) => {
     const projectName = projects.find((p) => p.id === projectId)?.name ?? null
     const row: ActionRow = {
-      id: nextId(), itemId, text, verb, project: projectName, priority,
+      id: nextId(), itemId, goalId, text, verb, project: projectName, priority,
       day: todayISO(), ts: Date.now(),
     }
     setActions((as) => [...as, row])
@@ -294,6 +322,15 @@ export default function DemoApp() {
     setProject(id: number, projectId: number | null) {
       setItems((xs) => xs.map((x) => (x.id === id ? { ...x, projectId } : x)))
     },
+    setItemPriority(id: number, priority: Priority) {
+      setItems((xs) => xs.map((x) => (x.id === id ? { ...x, priority } : x)))
+    },
+    setNotePriority(id: number, priority: Priority) {
+      setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, priority } : n)))
+    },
+    setNoteProject(id: number, projectId: number | null) {
+      setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, projectId } : n)))
+    },
     createProject(name: string): number {
       const p: Project = { id: nextId(), name }
       setProjects((ps) => [...ps, p])
@@ -378,19 +415,77 @@ export default function DemoApp() {
     setEntries((es) => [...es, row])
   }
 
+  /* ---- goals: state + logged activity, like the items ---- */
+
+  const goalAct: GoalAct = {
+    addGoal(raw: string) {
+      const proj = [...projects]
+      const tags = parseGoalTags(raw, proj, { projects: features.goalProjects, timeframes: features.goalTimeframes })
+      if (!tags.text) return
+      if (proj.length !== projects.length) setProjects(proj)
+      const goal: GoalRow = {
+        id: nextId(), text: tags.text,
+        horizon: tags.horizon ?? 'short',
+        status: 'active', projectId: tags.projectId,
+        hidden: false, hiddenUntil: null, achievedDay: null, createdDay: todayISO(),
+      }
+      setGoals((gs) => [...gs, goal])
+      logAction('goal_created', goal.text, null, goal.projectId, null, goal.id)
+    },
+    achieve(goal: GoalRow) {
+      const done = goal.status === 'achieved'
+      setGoals((gs) => gs.map((g) => (g.id === goal.id
+        ? { ...g, status: done ? 'active' as const : 'achieved' as const, achievedDay: done ? null : todayISO() }
+        : g)))
+      logAction(done ? 'goal_unachieved' : 'goal_achieved', goal.text, null, goal.projectId, null, goal.id)
+    },
+    del(goal: GoalRow) {
+      logAction('goal_deleted', goal.text, null, goal.projectId, null, goal.id)
+      setGoals((gs) => gs.filter((g) => g.id !== goal.id))
+    },
+    commitEdit(goal: GoalRow, raw: string) {
+      const text = raw.trim()
+      if (!text || text === goal.text) return
+      const proj = [...projects]
+      const tags = parseGoalTags(text, proj, { projects: features.goalProjects, timeframes: features.goalTimeframes })
+      if (proj.length !== projects.length) setProjects(proj)
+      // no token on an edit leaves the horizon alone — current rides in
+      setGoals((gs) => gs.map((g) => (g.id === goal.id
+        ? { ...g, text: tags.text, horizon: tags.horizon ?? g.horizon, projectId: tags.projectId }
+        : g)))
+      logAction('goal_edited', tags.text, null, tags.projectId, null, goal.id)
+    },
+    setProject(id: number, projectId: number | null) {
+      setGoals((gs) => gs.map((g) => (g.id === id ? { ...g, projectId } : g)))
+    },
+    pause(id: number, duration: HideDuration) {
+      setGoals((gs) => gs.map((g) => (g.id === id ? { ...g, hidden: true, hiddenUntil: hideUntil(duration) } : g)))
+      const goal = goals.find((g) => g.id === id)
+      if (goal) logAction('paused', goal.text, null, goal.projectId, null, goal.id)
+    },
+    resume(id: number) {
+      const goal = goals.find((g) => g.id === id)
+      setGoals((gs) => gs.map((g) => (g.id === id ? { ...g, hidden: false, hiddenUntil: null } : g)))
+      if (goal) logAction('unpaused', goal.text, null, goal.projectId, null, goal.id)
+    },
+    createProject(name: string): number {
+      return act.createProject(name)
+    },
+  }
+
   // Show Default View resets the working view; Reset the Demo reseeds both.
   const resetView = () => {
     setView('list'); setSel(null); setEditingId(null); setDetailsId(null); setPop(null)
-    setHiddenPriorities([]); setShowHiddenTasks(false); setShowHiddenNotes(false)
+    setHiddenPriorities([]); setShowHiddenTasks(false); setShowHiddenNotes(false); setShowPausedGoals(false)
     setAgentFilter(null); setProjectFilter(null)
-    setShowNotes(true); setShowToday(true); setShowDaily(true); setShowBacklog(true)
+    setShowNotes(true); setShowGoals(true); setShowToday(true); setShowDaily(true); setShowBacklog(true)
     setFocusMode(false)
   }
 
   const reset = () => {
     const s = makeSeed()
     idRef.current = 1000
-    setItems(s.items); setNotes(s.notes); setProjects(s.projects)
+    setItems(s.items); setNotes(s.notes); setGoals(s.goals); setProjects(s.projects)
     setActions(s.actions); setSessions(s.sessions); setEntries(s.entries)
     resetView()
     setNow(0)
@@ -433,6 +528,13 @@ export default function DemoApp() {
       if (it) selectTask(it.id)
       return
     }
+    if (c0 === 'g' && /[1-9]/.test(c1)) {
+      // goals read the rendered surface in DOM order — horizon groups, then
+      // the Achieved group at the bottom
+      const g = goalAddressList[Number(c1) - 1]
+      if (g) { setSel({ kind: 'goal', id: g.id }); setEditingId(null) }
+      return
+    }
     if ((c0 === 'b' || c0 === 'n') && /[1-4]/.test(c1)) {
       if (a.length === 2) { addrRef.current = a; return }
       if (!/[1-9]/.test(a[2])) return
@@ -462,7 +564,9 @@ export default function DemoApp() {
     if (!root) return
     const scope = s.kind === 'task'
       ? root.querySelector(`[data-item-id="${s.id}"]`)
-      : root.querySelector(`[data-note-id="${s.id}"]`)
+      : s.kind === 'note'
+        ? root.querySelector(`[data-note-id="${s.id}"]`)
+        : root.querySelector(`[data-goal-id="${s.id}"]`)
     scope?.querySelector<HTMLButtonElement>(`[data-kb="${n}"]`)?.click()
   }
 
@@ -524,9 +628,13 @@ export default function DemoApp() {
     if (e.key === 'Enter' && sel?.kind === 'task') {
       const item = allTasks.find((i) => i.id === sel.id)
       if (item && !item.hidden) { e.preventDefault(); act.complete(item) }
+    } else if (e.key === 'Enter' && sel?.kind === 'goal') {
+      const goal = goalAddressList.find((g) => g.id === sel.id)
+      if (goal && !goal.hidden) { e.preventDefault(); goalAct.achieve(goal) }
     } else if (e.key === 'e' && sel) {
       e.preventDefault()
       if (sel.kind === 'task') setEditingId(sel.id)
+      else if (sel.kind === 'goal') setEditingId(sel.id)
       else rootRef.current?.querySelector<HTMLElement>(`[data-note-id="${sel.id}"] textarea`)?.focus()
     } else if (e.key === 'Escape') {
       setSel(null)
@@ -560,6 +668,8 @@ export default function DemoApp() {
     { label: focusMode ? 'Exit Focus Mode' : 'Enter Focus Mode', hint: 'P1 notes · Today · Daily · P1 backlog', run: () => setFocusMode((v) => !v) },
     // the two-layers rule: a surface's Show/Hide entry exists only while the
     // surface does — a disabled feature has nothing to toggle
+    ...(features.goals ? [{ label: showGoals ? 'Hide Goals' : 'Show Goals', hint: '', run: () => setShowGoals((v) => !v) }] : []),
+    ...(features.goals && features.goalPause ? [{ label: showPausedGoals ? 'Hide Paused Goals' : 'Show Paused Goals', hint: 'paused goals, inline', run: () => setShowPausedGoals((v) => !v) }] : []),
     ...(features.notes ? [{ label: showNotes ? 'Hide Notes' : 'Show Notes', hint: '', run: () => setShowNotes((v) => !v) }] : []),
     ...(features.tasks && features.today ? [{ label: showToday ? 'Hide Today' : 'Show Today', hint: '', run: () => setShowToday((v) => !v) }] : []),
     ...(features.tasks && features.daily ? [{ label: showDaily ? 'Hide Daily' : 'Show Daily', hint: '', run: () => setShowDaily((v) => !v) }] : []),
@@ -676,6 +786,18 @@ export default function DemoApp() {
                 sel={sel} setSel={setSel} editingId={editingId} setEditingId={setEditingId}
                 detailsId={detailsId} setDetailsId={setDetailsId} pop={pop} setPop={setPop}
                 taskCapRef={taskCapRef} noteCapRef={noteCapRef} act={act}
+                goalsSlot={features.goals && showGoals && (
+                  <DemoGoals
+                    features={features}
+                    goals={goalsVisible}
+                    projects={projects}
+                    sel={sel} setSel={setSel}
+                    pop={pop} setPop={setPop}
+                    editingId={editingId} setEditingId={setEditingId}
+                    captureRef={goalCapRef}
+                    act={goalAct}
+                  />
+                )}
               />
             )}
             {view === 'settings' && (

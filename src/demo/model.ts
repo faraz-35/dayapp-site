@@ -35,6 +35,20 @@ export interface Note {
   collapsed: boolean
 }
 
+export type Horizon = 'timeless' | 'long' | 'short'
+
+export interface GoalRow {
+  id: number
+  text: string
+  horizon: Horizon
+  status: 'active' | 'achieved'
+  projectId: number | null
+  hidden: boolean
+  hiddenUntil: string | null
+  achievedDay: string | null
+  createdDay: string
+}
+
 export interface Project {
   id: number
   name: string
@@ -43,10 +57,12 @@ export interface Project {
 export type ActionVerb =
   | 'created' | 'completed' | 'uncompleted' | 'moved' | 'edited' | 'deleted'
   | 'fell to backlog' | 'paused' | 'unpaused'
+  | 'goal_created' | 'goal_achieved' | 'goal_unachieved' | 'goal_edited' | 'goal_deleted'
 
 export interface ActionRow {
   id: number
   itemId: number | null
+  goalId: number | null
   text: string
   verb: ActionVerb
   project: string | null
@@ -75,6 +91,7 @@ export interface EntryRow {
 export interface Seed {
   items: Item[]
   notes: Note[]
+  goals: GoalRow[]
   projects: Project[]
   actions: ActionRow[]
   sessions: SessionRow[]
@@ -130,6 +147,12 @@ export function fmtReminder(iso: string): string {
   return `${MO[m - 1]} ${d}`
 }
 
+// Month-granular, the achieved stamp: "Aug 2026".
+export function fmtMonth(iso: string): string {
+  const [y, m] = iso.split('-').map(Number)
+  return `${MO[m - 1]} ${y}`
+}
+
 // 4920 → "1h 22m" · 1500 → "25m" · 372 → "6m"
 export function fmtDuration(secs: number): string {
   const m = Math.round(secs / 60)
@@ -158,8 +181,9 @@ export function fmtAt(ts: number): string {
 // Which surface a token line is on — the matcher colors exactly what that
 // surface parses: the task capture routes ##t/##d/##b (##j/##q are prose
 // there), the notes capture routes ##j/##q (no @ — notes have no delegation
-// axis), edits parse only the trailing !N/#tag/@ tokens.
-export type TokenSurface = 'task-capture' | 'task-edit' | 'note-capture'
+// axis), the goal surfaces color $N/#tag only, edits parse only the trailing
+// !N/#tag/@ tokens.
+export type TokenSurface = 'task-capture' | 'task-edit' | 'note-capture' | 'goal-capture' | 'goal-edit'
 
 // The Settings switches ride through here: a switched-off axis's token is
 // literal prose — not colored, not stripped — on every surface at once.
@@ -169,6 +193,7 @@ export interface TagFlags {
   agent?: boolean
   journal?: boolean
   quotes?: boolean
+  timeframes?: boolean
 }
 
 // The alternation a surface colors/strips, narrowed by the flags. null =
@@ -178,12 +203,16 @@ function tokenRe(surface: TokenSurface, f?: TagFlags): RegExp | null {
   if (surface === 'note-capture') {
     if (f?.journal !== false) parts.push('##j(?=\\s|$)')
     if (f?.quotes !== false) parts.push('##q(?=\\s|$)')
+  } else if (surface === 'goal-capture' || surface === 'goal-edit') {
+    // $N needs the space/end guard only — "$100k" fails the lookahead after
+    // the digit, so money stays literal prose
+    if (f?.timeframes !== false) parts.push('\\$[123](?=\\s|$)')
   } else {
     parts.push('##[tbd](?=\\s|$)')
   }
-  if (f?.priorities !== false) parts.push('![0-3](?=\\s|$)')
+  if (f?.priorities !== false && surface !== 'goal-capture' && surface !== 'goal-edit') parts.push('![0-3](?=\\s|$)')
   if (f?.projects !== false) parts.push('#[\\w-]+')
-  if (surface !== 'note-capture' && f?.agent !== false) parts.push('@0?(?=\\s|$)')
+  if (surface !== 'note-capture' && surface !== 'goal-capture' && surface !== 'goal-edit' && f?.agent !== false) parts.push('@0?(?=\\s|$)')
   return parts.length > 0 ? new RegExp(parts.join('|'), 'g') : null
 }
 
@@ -256,6 +285,44 @@ function addProject(name: string, projects: Project[]): number {
   const id = Math.max(0, ...projects.map((p) => p.id)) + 1
   projects.push({ id, name })
   return id
+}
+
+export interface GoalTags {
+  text: string
+  horizon: Horizon | null // null = no token on the line (an edit keeps its tier)
+  projectId: number | null
+}
+
+// The goals' token grammar: $1 short · $2 long · $3 timeless (last wins) +
+// the #tag project link. Tokens strip from anywhere in the line — unlike
+// items' trailing-only rule — and "$100k" never parses (the digit must end
+// the word). No token leaves the horizon alone; #0 clears the project.
+// `flags` narrows to the axes that exist; the resolver creates unknown tags,
+// so the caller mutates its projects copy like every other parse.
+export function parseGoalTags(
+  raw: string,
+  projects: Project[],
+  flags?: TagFlags,
+): GoalTags {
+  const words = raw.trim().split(/\s+/)
+  let horizon: Horizon | null = null
+  let projectId: number | null = null
+  const kept: string[] = []
+  for (const w of words) {
+    if (flags?.timeframes !== false && /^\$[123]$/.test(w)) {
+      horizon = w === '$1' ? 'short' : w === '$2' ? 'long' : 'timeless'
+    } else if (flags?.projects !== false && /^#[\w-]+$/.test(w)) {
+      const name = w.slice(1)
+      if (name === '0') projectId = null
+      else {
+        const n = name.toLowerCase()
+        const exact = projects.find((p) => p.name.toLowerCase() === n)
+        const pre = projects.filter((p) => p.name.toLowerCase().startsWith(n))
+        projectId = exact ? exact.id : pre.length === 1 ? pre[0].id : addProject(name, projects)
+      }
+    } else kept.push(w)
+  }
+  return { text: kept.join(' '), horizon, projectId }
 }
 
 // The task capture's route: a leading ##t / ##d / ##b picks the section, a
@@ -412,13 +479,16 @@ export function makeSeed(): Seed {
   // journal's display order): created four days ago, done every day since —
   // the streak and the analytics day-ledger read true.
   const actions: ActionRow[] = [
-    { id: 1, itemId: 1, text: 'Water the plants', verb: 'created', project: null, priority: null, day: dayISO(4), ts: at(4, 7, 0) },
-    { id: 2, itemId: 1, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: dayISO(3), ts: at(3, 9, 12) },
-    { id: 3, itemId: 1, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: dayISO(2), ts: at(2, 8, 40) },
-    { id: 4, itemId: 2, text: 'Book dentist appointment', verb: 'created', project: 'Home', priority: 2, day: dayISO(2), ts: at(2, 11, 0) },
-    { id: 5, itemId: 1, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: dayISO(1), ts: at(1, 9, 20) },
-    { id: 6, itemId: 1, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: todayISO(), ts: at(0, 7, 30) },
+    { id: 1, itemId: 1, goalId: null, text: 'Water the plants', verb: 'created', project: null, priority: null, day: dayISO(4), ts: at(4, 7, 0) },
+    { id: 2, itemId: 1, goalId: null, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: dayISO(3), ts: at(3, 9, 12) },
+    { id: 3, itemId: 1, goalId: null, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: dayISO(2), ts: at(2, 8, 40) },
+    { id: 4, itemId: 2, goalId: null, text: 'Book dentist appointment', verb: 'created', project: 'Home', priority: 2, day: dayISO(2), ts: at(2, 11, 0) },
+    { id: 5, itemId: 1, goalId: null, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: dayISO(1), ts: at(1, 9, 20) },
+    { id: 6, itemId: 1, goalId: null, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: todayISO(), ts: at(0, 7, 30) },
   ]
 
-  return { items, notes, projects, actions, sessions: [], entries: [] }
+  // No seeded goals — the factory set ships Goals off, and the app's demo
+  // seed plants none: flipping the switch on reveals the empty capture-first
+  // surface, exactly like the app.
+  return { items, notes, goals: [], projects, actions, sessions: [], entries: [] }
 }

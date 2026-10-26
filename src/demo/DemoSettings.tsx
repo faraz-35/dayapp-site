@@ -1,14 +1,14 @@
 /* The demo's settings page (⌘P → Open Settings, or the gear) — the app's
    SettingsView structure at demo scope: a tab bar picks one pane at a time
-   (Features / Appearance / Header / Views). Features lays the Tasks / Notes
-   surface cards side by side, each carrying its existence master as the card
-   title's own switch with the sub-features beneath (the demo has no Goals
-   layer); a sub-row dims inert while its master is off, and the Header rows
-   need their features. Appearance is one look card — the two resting fills
-   over the theme ladder. Views holds the demo's one lens, Focus, as a card
-   with an Active/Enter state. A theme pick dresses the window only; the page
-   around it answers to the nav toggle. Mouse-first like the analytics page:
-   no grammar wiring, free-mode scrolling works. */
+   (Features / Appearance / Header / Views). Features lays the Tasks / Notes /
+   Goals surface cards side by side, each carrying its existence master as the
+   card title's own switch with the sub-features beneath; a sub-row dims inert
+   while its master is off, and the Header rows need their features.
+   Appearance is one look card — the two resting fills over the theme ladder.
+   Views holds the demo's one lens, Focus, as a card with an Active/Enter
+   state. A theme pick dresses the window only; the page around it answers to
+   the nav toggle. Mouse-first like the analytics page: no grammar wiring,
+   free-mode scrolling works. */
 
 import { useState } from 'react'
 import { THEMES, type ThemeColors } from '../themes'
@@ -17,6 +17,7 @@ export type FeatureKey =
   | 'tasks' | 'today' | 'daily' | 'backlog' | 'timer' | 'reminders'
   | 'taskProjects' | 'taskHide' | 'dailyPause' | 'taskDetails' | 'taskPriorities' | 'agent'
   | 'notes' | 'noteProjects' | 'notePriorities' | 'noteHide' | 'noteDownload'
+  | 'goals' | 'goalTimeframes' | 'goalProjects' | 'goalPause'
   | 'journal' | 'quotes'
 
 export type HeaderBtn = 'palette' | 'hidden' | 'analytics' | 'journal' | 'quotes' | 'settings' | 'theme'
@@ -24,10 +25,11 @@ export type HeaderBtn = 'palette' | 'hidden' | 'analytics' | 'journal' | 'quotes
 export type Features = Record<FeatureKey, boolean>
 export type HeaderBtns = Record<HeaderBtn, boolean>
 
-// The three surface cards; the demo has no Goals layer.
+// The three surface cards, the app's order (Goals sits over everything).
 const FEATURE_GROUPS = [
   { id: 'tasks', title: 'Tasks' },
   { id: 'notes', title: 'Notes' },
+  { id: 'goals', title: 'Goals' },
 ] as const
 
 const FEATURES: { key: FeatureKey; label: string; hint: string; group: (typeof FEATURE_GROUPS)[number]['id'] }[] = [
@@ -50,6 +52,10 @@ const FEATURES: { key: FeatureKey; label: string; hint: string; group: (typeof F
   { key: 'noteDownload', label: 'Note download', hint: 'the ⬇ .txt export on notes', group: 'notes' },
   { key: 'journal', label: 'Journal', hint: '##j entries + the page — survives Notes off', group: 'notes' },
   { key: 'quotes', label: 'Quotes', hint: '##q entries + the page — survives Notes off', group: 'notes' },
+  { key: 'goals', label: 'Goals', hint: 'the identity layer — horizons above the notes', group: 'goals' },
+  { key: 'goalTimeframes', label: 'Goal timeframes', hint: 'the $1/$2/$3 tiers — off, one simple list', group: 'goals' },
+  { key: 'goalProjects', label: 'Goal projects', hint: 'the #tag link on a goal', group: 'goals' },
+  { key: 'goalPause', label: 'Goal pause', hint: 'the ◐ pause on an active goal', group: 'goals' },
 ]
 
 // Rows whose switch is pointless while their card's master (or a tighter
@@ -71,6 +77,9 @@ const GATED_BY: Partial<Record<FeatureKey, FeatureKey>> = {
   notePriorities: 'notes',
   noteHide: 'notes',
   noteDownload: 'notes',
+  goalTimeframes: 'goals',
+  goalProjects: 'goals',
+  goalPause: 'goals',
 }
 
 // `need` lists the features the button reads — the row goes inert only when
@@ -78,7 +87,7 @@ const GATED_BY: Partial<Record<FeatureKey, FeatureKey>> = {
 // window header's cluster order.
 const HEADER_BUTTONS: { key: HeaderBtn; label: string; hint: string; need?: FeatureKey[] }[] = [
   { key: 'palette', label: 'Command palette', hint: '⌘ on macOS, the prompt field elsewhere — the mouse door for ⌘P' },
-  { key: 'hidden', label: 'Hidden entries', hint: 'the ◐ archive peek', need: ['taskHide', 'dailyPause', 'noteHide'] },
+  { key: 'hidden', label: 'Hidden entries', hint: 'the ◐ archive peek', need: ['taskHide', 'dailyPause', 'noteHide', 'goalPause'] },
   { key: 'analytics', label: 'Analytics', hint: 'the chart icon' },
   { key: 'journal', label: 'Journal', hint: 'the prose icon', need: ['journal'] },
   { key: 'quotes', label: 'Quotes', hint: 'the quote icon', need: ['quotes'] },

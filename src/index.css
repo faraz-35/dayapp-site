@@ -247,7 +247,7 @@ h2 {
   font-size: 13px;
 }
 
-.demo-skeleton .win-body { min-height: 540px; }
+.win-body { min-height: 540px; }
 
 .win-header {
   position: relative;
@@ -735,8 +735,6 @@ h2 {
   background: var(--border);
 }
 .priority-bars .bar.filled { background: var(--accent); }
-.priority-bars.faint { opacity: 0.85; }
-.priority-bars.faint .bar.filled { background: var(--text-faint); }
 
 .agent-badge {
   display: inline-flex;
@@ -806,6 +804,43 @@ h2 {
   flex: 1;
   height: 1px;
   background: var(--border);
+}
+
+/* ---- goals: the identity layer, above the notes ----------------------------- */
+
+/* horizon labels read like the Backlog's tier dividers but centered, no
+   hairlines — the app's stack-head pattern for the goals layer */
+.d-goals .tier-divider {
+  width: auto;
+  justify-content: center;
+}
+.d-goals .tier-divider::before,
+.d-goals .tier-divider::after { content: none; }
+.tier-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* the timeless slot: ∞ rides where the checkbox circle sits, so the text
+   column holds across both row kinds */
+.goal-eternal {
+  flex-shrink: 0;
+  width: 15px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* the priority menu's bars + label pair */
+.prio-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
 
 /* ---- note cards ------------------------------------------------------------ */
@@ -1506,6 +1541,9 @@ h2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   align-items: start;
+}
+@media (min-width: 1100px) {
+  .set-grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 .set-grid3 > .an-card { min-width: 0; }
 @media (max-width: 759.9px) {

@@ -11,12 +11,12 @@ import type { Features } from './DemoSettings'
 import {
   dayISO, fmtClock, fmtDuration, fmtReminder, projectColor, clipProject, tierRank,
   todayISO, tokenSpans,
-  type HideDuration, type Item, type Note, type Project, type Section,
+  type HideDuration, type Item, type Note, type Priority, type Project, type Section,
   type SessionRow, type TagFlags, type TokenSurface,
 } from './model'
 
-export type Pop = { kind: 'project' | 'remind' | 'hide'; on: 'task' | 'note'; id: number } | null
-export type Sel = { kind: 'task' | 'note'; id: number } | null
+export type Pop = { kind: 'project' | 'priority' | 'remind' | 'hide'; on: 'task' | 'note' | 'goal'; id: number } | null
+export type Sel = { kind: 'task' | 'note' | 'goal'; id: number } | null
 
 export interface CaptureHandle {
   preset(v: string): void
@@ -51,6 +51,9 @@ export interface DemoListProps {
   setPop(p: Pop): void
   taskCapRef: React.RefObject<CaptureHandle | null>
   noteCapRef: React.RefObject<CaptureHandle | null>
+  // the Goals surface, composed above Notes by the shell (Goals sits at the
+  // very top of the app's stack, over every capture surface)
+  goalsSlot?: React.ReactNode
   act: {
     addTask(raw: string): void
     addNote(raw: string): void
@@ -58,6 +61,9 @@ export interface DemoListProps {
     del(item: Item): void
     commitEdit(item: Item, raw: string): void
     setProject(id: number, projectId: number | null): void
+    setItemPriority(id: number, priority: Priority): void
+    setNotePriority(id: number, priority: Priority): void
+    setNoteProject(id: number, projectId: number | null): void
     createProject(name: string): number
     toggleTimer(item: Item): void
     promote(item: Item): void
@@ -107,6 +113,7 @@ export default function DemoList(p: DemoListProps) {
   ], [f.journal, f.quotes, f.notePriorities, f.noteProjects])
   return (
     <div className="d-list">
+      {p.goalsSlot}
       {/* ---- notes: content, not activity — creating one writes no log ---- */}
       {p.showNotes && (
         <>
@@ -179,6 +186,7 @@ export default function DemoList(p: DemoListProps) {
 const TOKEN_WORDS: Record<string, string> = {
   '##t': 'today', '##d': 'daily', '##b': 'backlog', '##j': 'journal', '##q': 'quote',
   '@': 'agent', '@0': 'agent',
+  '$1': 'short', '$2': 'long', '$3': 'timeless',
 }
 
 interface MirrorSeg { raw: string; word?: string; bars?: number; tok?: boolean }
@@ -352,7 +360,7 @@ function useTokenPaint(
 // painted by the hook. The capture fields also carry the app's demoExamples:
 // rotating example lines while the field sits empty (the real app's demo
 // mode — the static placeholder is gone).
-function CaptureField({ handleRef, onSubmit, textarea, surface, flags, demoExamples }: {
+export function CaptureField({ handleRef, onSubmit, textarea, surface, flags, demoExamples }: {
   handleRef: React.RefObject<CaptureHandle | null>
   onSubmit(raw: string): void
   textarea?: boolean
@@ -521,7 +529,7 @@ function NoteGroups({ notes, features, projects, sel, setSel, pop, setPop, act }
         return (
           <div key={gi}>
             {showDivider && (
-              <div className="tier-divider"><PriorityBars filled={3 - gi} faint /></div>
+              <div className="tier-divider"><PriorityBars filled={3 - gi} /></div>
             )}
             {rows.map((n) => (
               <NoteCard key={n.id} note={n} features={features} projects={projects} selected={sel?.kind === 'note' && sel.id === n.id}
@@ -607,6 +615,16 @@ function NoteCard({ note, features, projects, selected, setSel, pop, setPop, act
             onClick={(e) => { e.stopPropagation(); if (val !== note.body) act.noteBody(note.id, val); act.noteCollapse(note.id) }}>
             <Chevron up={note.collapsed} />
           </button>,
+          features.noteProjects && (
+            <button key="proj" className={`item-action${pop?.kind === 'project' && pop.on === 'note' && pop.id === note.id ? ' active' : ''}`} title="Project"
+              onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'project' && pop.on === 'note' && pop.id === note.id ? null : { kind: 'project', on: 'note', id: note.id }) }}>#</button>
+          ),
+          features.notePriorities && (
+            <button key="prio" className={`item-action${pop?.kind === 'priority' && pop.on === 'note' && pop.id === note.id ? ' active' : ''}`} title="Priority"
+              onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'priority' && pop.on === 'note' && pop.id === note.id ? null : { kind: 'priority', on: 'note', id: note.id }) }}>
+              <PriorityBars filled={note.priority == null ? 0 : 4 - note.priority} />
+            </button>
+          ),
           features.noteDownload && note.body.trim() && (
             <button key="dl" className="item-action" title="Download .txt"
               onClick={(e) => { e.stopPropagation(); flush(); act.noteDownload(note.id) }}>
@@ -622,6 +640,21 @@ function NoteCard({ note, features, projects, selected, setSel, pop, setPop, act
           cloneElement(b, { 'data-kb': i + 1 }),
         )}
       </div>
+      {pop && pop.on === 'note' && pop.id === note.id && pop.kind === 'project' && (
+        <ProjectMenu
+          projects={projects}
+          current={note.projectId}
+          onPick={(pid) => { act.setNoteProject(note.id, pid); setPop(null) }}
+          onCreate={(name) => { const id = act.createProject(name); act.setNoteProject(note.id, id); setPop(null) }}
+          onClose={() => setPop(null)}
+        />
+      )}
+      {pop && pop.on === 'note' && pop.id === note.id && pop.kind === 'priority' && (
+        <PriorityMenu
+          current={note.priority}
+          onPick={(p) => { act.setNotePriority(note.id, p); setPop(null) }}
+        />
+      )}
       {pop && pop.on === 'note' && pop.id === note.id && pop.kind === 'hide' && (
         <HideMenu verb="Hide" onPick={(d) => { act.noteHide(note.id, d); setPop(null) }} />
       )}
@@ -661,7 +694,7 @@ function ItemSection({ name, items, features, projects, activeSession, nowMs, to
           <div key={item.id}>
             {features.taskPriorities && newTier && (
               <div className="tier-divider">
-                <PriorityBars filled={item.priority == null ? 0 : 4 - item.priority} faint />
+                <PriorityBars filled={item.priority == null ? 0 : 4 - item.priority} />
               </div>
             )}
             <TaskRow
@@ -784,6 +817,12 @@ function TaskRow({ item, features, projects, activeSession, nowMs, totalSecsOf, 
                 <button key="proj" className={`item-action${pop?.kind === 'project' && pop.on === 'task' && pop.id === item.id ? ' active' : ''}`} title="Project"
                   onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'project' && pop.on === 'task' && pop.id === item.id ? null : { kind: 'project', on: 'task', id: item.id }) }}>#</button>
               ),
+              features.taskPriorities && (
+                <button key="prio" className={`item-action${pop?.kind === 'priority' && pop.on === 'task' && pop.id === item.id ? ' active' : ''}`} title="Priority"
+                  onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'priority' && pop.on === 'task' && pop.id === item.id ? null : { kind: 'priority', on: 'task', id: item.id }) }}>
+                  <PriorityBars filled={item.priority == null ? 0 : 4 - item.priority} />
+                </button>
+              ),
               features.reminders && (
                 <button key="remind" className={`item-action${pop?.kind === 'remind' && pop.on === 'task' && pop.id === item.id ? ' active' : ''}`} title="Remind me"
                   onClick={(e) => { e.stopPropagation(); setPop(pop?.kind === 'remind' && pop.on === 'task' && pop.id === item.id ? null : { kind: 'remind', on: 'task', id: item.id }) }}>◷</button>
@@ -815,6 +854,12 @@ function TaskRow({ item, features, projects, activeSession, nowMs, totalSecsOf, 
             onClose={() => setPop(null)}
           />
         )}
+        {pop && pop.on === 'task' && pop.id === item.id && pop.kind === 'priority' && (
+          <PriorityMenu
+            current={item.priority}
+            onPick={(p) => { act.setItemPriority(item.id, p); setPop(null) }}
+          />
+        )}
         {pop && pop.on === 'task' && pop.id === item.id && pop.kind === 'remind' && (
           <RemindStub onPick={() => setPop(null)} />
         )}
@@ -829,15 +874,16 @@ function TaskRow({ item, features, projects, activeSession, nowMs, totalSecsOf, 
   )
 }
 
-function EditInput({ initial, flags, onCommit }: {
+export function EditInput({ initial, flags, surface = 'task-edit', onCommit }: {
   initial: string
   flags?: TagFlags
+  surface?: TokenSurface
   onCommit(raw: string): void
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const mirrorRef = useRef<HTMLDivElement>(null)
   const layerRef = useRef<HTMLDivElement>(null)
-  const paint = useTokenPaint('task-edit', ref, mirrorRef, layerRef, flags)
+  const paint = useTokenPaint(surface, ref, mirrorRef, layerRef, flags)
   useEffect(() => {
     const el = ref.current
     if (!el) return
@@ -899,14 +945,13 @@ function DetailsBody({ initial, onCommit, onDone }: {
 
 /* ---- the project popover ---------------------------------------------------- */
 
-function ProjectMenu({ projects, current, onPick, onCreate, onClose }: {
+export function ProjectMenu({ projects, current, onPick, onCreate, onClose }: {
   projects: Project[]
   current: number | null
   onPick(projectId: number | null): void
   onCreate(name: string): void
   onClose(): void
-}) {
-  const [q, setQ] = useState('')
+}) {  const [q, setQ] = useState('')
   const [hi, setHi] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   useEffect(() => inputRef.current?.focus(), [])
@@ -998,7 +1043,7 @@ const HIDE_OPTIONS: { id: HideDuration; label: string; sub: string }[] = [
   { id: 'month', label: 'For a month', sub: 'until next month' },
 ]
 
-function HideMenu({ verb, onPick }: {
+export function HideMenu({ verb, onPick }: {
   verb: 'Hide' | 'Pause'
   onPick(d: HideDuration): void
 }) {
@@ -1013,6 +1058,41 @@ function HideMenu({ verb, onPick }: {
         >
           <span className="hide-menu-label">{o.label}</span>
           <span className="hide-menu-sub">{o.id === 'forever' && verb === 'Pause' ? 'until unpaused' : o.sub}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/* ---- the priority popover ---------------------------------------------------- */
+
+// The app's PriorityMenu pattern: four rows carrying their bars — picking one
+// sets the tier, P0 row clears. Housekeeping, not logged, exactly like the
+// token path.
+export function PriorityMenu({ current, onPick }: {
+  current: Priority
+  onPick(p: Priority): void
+}) {
+  const [ref, flip] = useFlip()
+  const options: { p: Priority; label: string }[] = [
+    { p: 1, label: 'Priority 1' },
+    { p: 2, label: 'Priority 2' },
+    { p: 3, label: 'Priority 3' },
+    { p: null, label: 'No priority' },
+  ]
+  return (
+    <div className={'row-menu hide-menu' + (flip ? ' flip' : '')} ref={ref} onClick={(e) => e.stopPropagation()}>
+      {options.map((o) => (
+        <button
+          key={o.label}
+          className="hide-menu-item"
+          onMouseDown={(e) => { e.preventDefault(); onPick(o.p) }}
+        >
+          <span className="hide-menu-label prio-opt">
+            <PriorityBars filled={o.p == null ? 0 : 4 - o.p} />
+            {o.label}
+          </span>
+          {o.p === current && <span className="row-menu-check">✓</span>}
         </button>
       ))}
     </div>
@@ -1053,9 +1133,9 @@ function RemindStub({ onPick }: { onPick(): void }) {
 
 /* ---- shared glyphs ----------------------------------------------------------- */
 
-export function PriorityBars({ filled, faint }: { filled: number; faint?: boolean }) {
+export function PriorityBars({ filled }: { filled: number }) {
   return (
-    <span className={'priority-bars' + (faint ? ' faint' : '')} aria-hidden>
+    <span className="priority-bars" aria-hidden>
       {[1, 2, 3].map((i) => (
         <span key={i} className={'bar' + (i <= filled ? ' filled' : '')} />
       ))}

@@ -96,7 +96,9 @@ export default function DemoAnalytics({ items, actions, sessions, projects }: {
     const keys: string[] = []
     for (let k = 0; k < span; k++) keys.push(dayISO(k))
     const daySet = new Set(keys)
-    const ordered = [...actions].sort((a, b) => a.ts - b.ts)
+    // item actions only — goal rows ride goal_id and stay out of every
+    // derivation here, exactly like the app's dashboard
+    const ordered = [...actions].filter((a) => a.itemId != null).sort((a, b) => a.ts - b.ts)
     const doneAll = effective(ordered)
     const doneRows = doneAll.filter((a) => daySet.has(a.day))
 
