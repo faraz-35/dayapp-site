@@ -87,21 +87,23 @@ export default function DemoApp() {
   // the settings page (⌘P → Open Settings, or the gear): existence (Features),
   // the resting fills (Appearance), the window's icon buttons (Header), the
   // Focus lens (Views). Existence is configuration — Show Default View and
-  // Reset the Demo never touch it. The defaults are the site's chosen first
-  // impression: notes bare, note tiers off, task details off, reminders off.
+  // Reset the Demo never touch it. The defaults are the app's factory set
+  // (2026-10-24): the plain working app — tasks + notes with note download —
+  // and every power axis one switch away.
   const [features, setFeatures] = useState<Features>({
     tasks: true, today: true, daily: true, backlog: true,
-    timer: true, reminders: false, taskProjects: true, taskHide: true, dailyPause: true,
-    taskDetails: false, taskPriorities: true, agent: true,
-    notes: true, noteProjects: true, notePriorities: false, noteHide: true, noteDownload: true,
-    journal: true, quotes: true,
+    timer: false, reminders: false, taskProjects: false, taskHide: false, dailyPause: false,
+    taskDetails: false, taskPriorities: false, agent: false,
+    notes: true, noteProjects: false, notePriorities: false, noteHide: false, noteDownload: true,
+    journal: false, quotes: false,
   })
   const [notesCard, setNotesCard] = useState(false)
   const [tasksCard, setTasksCard] = useState(false)
   const [headerBtns, setHeaderBtns] = useState<HeaderBtns>({
-    // Journal and Quotes default off — the written-entry pages are opt-in
-    // chrome, same default as the app.
-    palette: true, hidden: true, journal: false, quotes: false, analytics: true, settings: true, theme: true,
+    // the app's minimal header: Analytics / Settings / Theme — ⌘P needs no
+    // mouse door, the ◐ peek needs an archive axis, and the written-entry
+    // pages are opt-in chrome. Journal and Quotes ride their features off.
+    palette: false, hidden: false, journal: false, quotes: false, analytics: true, settings: true, theme: true,
   })
 
   const [now, setNow] = useState(0)

@@ -1,9 +1,10 @@
 /* The demo's data model — the app's shape, small enough to hold in React
    state: items (state + a self-writing action log), notes and entries
-   (content, never logged), sessions (measurement). One persona, the same one
-   the app's own demo mode seeds: a founder growing a small SaaS. Every seed
-   timestamp is computed relative to now onto the app's 6am→6am logical day,
-   so a fresh visitor always lands on a live-looking week. */
+   (content, never logged), sessions (measurement). The seed is the app's own
+   demo seed, ported row for row: one row per surface, plain everyday texts.
+   Every seed timestamp is computed relative to now onto the app's 6am→6am
+   logical day, so the done-today daily, its streak, and the pending reminder
+   demo correctly no matter when a visitor lands. */
 
 export type Section = 'today' | 'daily' | 'backlog'
 export type Priority = 1 | 2 | 3 | null
@@ -385,127 +386,39 @@ export function getTickNow(): number {
 
 /* ---- the seed ---------------------------------------------------------------- */
 
-// Deterministic PRNG — every visitor sees the same week.
-function mulberry32(seed: number) {
-  return () => {
-    seed |= 0
-    seed = (seed + 0x6d2b79f5) | 0
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-const DONE_POOL = [
-  ['Fix flaky integration test', 'meridian', 2],
-  ['Write the changelog', 'meridian', null],
-  ['Reply to support emails', null, null],
-  ['Update landing page copy', 'growth', 3],
-  ['Refactor the sync module', 'meridian', null],
-  ['Plan the week', null, null],
-  ['Send the invoices', null, null],
-  ['Ship the blog post', 'growth', 2],
-  ['Triage the feedback inbox', null, 3],
-  ['Prep the investor deck', 'growth', 1],
-] as const
-
 export function makeSeed(): Seed {
+  // The app's demo seed (src-tauri/demo.sql), ported: deliberately small —
+  // the first minute is the product. One row per surface and plain everyday
+  // texts: a daily habit done for today, a backlog row shelved with a
+  // reminder, a note. Today is empty on purpose: the capture bar with its
+  // rotating hints is the first act. The backlog row still carries its axes —
+  // priority, pending reminder, project link — dormant while their Settings
+  // switches are off (the factory defaults), and in action the moment one is
+  // flipped on. What was cut is count, not capability.
   const projects: Project[] = [
-    { id: 1, name: 'meridian' },
-    { id: 2, name: 'growth' },
-    { id: 3, name: 'health' },
+    { id: 1, name: 'Home' },
   ]
 
-  // Four rows and two notes — the demo is a first look, not a dump. The
-  // retired rows still exist in the log below: the journal is deletion-proof,
-  // so the week's history stays whole while the list stays quiet.
   const items: Item[] = [
-    { id: 1, text: 'Review PR #214 — search ranking tweak', section: 'today', status: 'active', doneDay: null, priority: 2, projectId: 1, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(2), remindAt: null },
-    { id: 2, text: 'Fix crash on first-launch onboarding', section: 'today', status: 'done', doneDay: todayISO(), priority: 1, projectId: 1, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(1), remindAt: null },
-    { id: 7, text: 'Read 20 pages', section: 'daily', status: 'active', doneDay: null, priority: null, projectId: null, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(18), remindAt: null },
-    { id: 10, text: 'Rewrite the onboarding flow', section: 'backlog', status: 'active', doneDay: null, priority: 2, projectId: 2, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(9), remindAt: null },
+    { id: 1, text: 'Water the plants', section: 'daily', status: 'active', doneDay: todayISO(), priority: null, projectId: null, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(4), remindAt: null },
+    { id: 2, text: 'Book dentist appointment', section: 'backlog', status: 'active', doneDay: null, priority: 2, projectId: 1, agent: false, details: '', hidden: false, hiddenUntil: null, createdDay: dayISO(2), remindAt: dayISO(-3) },
   ]
 
   const notes: Note[] = [
-    { id: 1, body: 'Launch checklist\nscreenshots · install link · first post draft', priority: 1, projectId: null, hidden: false, hiddenUntil: null, collapsed: false },
-    { id: 2, body: 'Interview synthesis draft\nthe churn story is the onboarding story', priority: 2, projectId: 2, hidden: false, hiddenUntil: null, collapsed: false },
+    { id: 1, body: 'Groceries\n- oats\n- bananas\n- coffee', priority: null, projectId: null, hidden: false, hiddenUntil: null, collapsed: false },
   ]
 
-  const rnd = mulberry32(0xdada)
-  const actions: ActionRow[] = []
-  const sessions: SessionRow[] = []
-  let aid = 0
-  let sid = 0
-
-  const log = (verb: ActionVerb, text: string, itemId: number | null, k: number, hh: number, mm: number, project: string | null = null, priority: Priority = null) => {
-    actions.push({ id: ++aid, itemId, text, verb, project, priority, day: dayISO(k), ts: at(k, hh, mm) })
-  }
-
-  // Backlog rows were created on the days the seed says they were.
-  log('created', 'Renew meridian SSL certificate', 9, 12, 10, 20, 'meridian', 1)
-  log('created', 'Deep-clean the apartment', 12, 15, 20, 5)
-  log('created', 'Rewrite the onboarding flow', 10, 9, 11, 40, 'growth', 2)
-  log('created', 'Sketch the mobile widget', 11, 6, 15, 10, 'meridian', 3)
-  log('created', 'Retire the old landing A/B test', 13, 11, 9, 30, 'growth')
-
-  // Two weeks of the persona's history: dailies with honest gaps, one or two
-  // one-off completions a day, deep-work time, an occasional fall to Backlog.
-  // "Read 20 pages" was paused for four days — the pause folds into the
-  // analytics replay, so those days are never counted as missed.
-  log('paused', 'Read 20 pages', 7, 10, 7, 5)
-  for (let k = 13; k >= 1; k--) {
-    if (k === 6) log('unpaused', 'Read 20 pages', 7, k, 7, 30)
-    const readPaused = k >= 6 && k <= 10
-    if (!readPaused && rnd() < 0.82) log('completed', 'Read 20 pages', 7, k, 21, 20 + Math.floor(rnd() * 25))
-    if (rnd() < 0.7) {
-      log('completed', 'Morning deep work block', 6, k, 7, 15 + Math.floor(rnd() * 10))
-      const mins = 50 + Math.floor(rnd() * 45)
-      sessions.push({ id: ++sid, itemId: 6, itemText: 'Morning deep work block', startedAt: at(k, 7, 20), endedAt: at(k, 7, 20) + mins * 60e3, secs: mins * 60 })
-    }
-    if (k <= 12 && rnd() < 0.75) log('completed', 'Walk 8k steps', 8, k, 7, 12)
-    const n = rnd() < 0.5 ? 2 : 1
-    for (let i = 0; i < n; i++) {
-      const [text, proj, prio] = DONE_POOL[Math.floor(rnd() * DONE_POOL.length)]
-      const hh = 9 + Math.floor(rnd() * 9)
-      log('completed', text, null, k, hh, Math.floor(rnd() * 60), proj, prio as Priority)
-      if (rnd() < 0.4) {
-        const mins = 20 + Math.floor(rnd() * 70)
-        sessions.push({ id: ++sid, itemId: -1, itemText: text, startedAt: at(k, hh - 1, 30), endedAt: at(k, hh - 1, 30) + mins * 60e3, secs: mins * 60 })
-      }
-    }
-    if (rnd() < 0.3) log('fell to backlog', DONE_POOL[Math.floor(rnd() * DONE_POOL.length)][0], null, k, 22, 30)
-  }
-
-  // Time already tracked on the live rows — deliberately none on the Today
-  // rows: an unfresh ⏱ total on the first task a visitor reads reads as
-  // clutter, and a fresh visitor's day hasn't earned time yet.
-  sessions.push({ id: ++sid, itemId: 9, itemText: 'Renew meridian SSL certificate', startedAt: at(8, 11, 0), endedAt: at(8, 11, 15), secs: 900 })
-
-  // Today, so far.
-  log('completed', 'Walk 8k steps', 8, 0, 7, 12, 'health')
-  log('created', 'Draft the monthly investor update', 3, 0, 8, 15, 'growth')
-  log('completed', 'Fix crash on first-launch onboarding', 2, 0, 9, 41, 'meridian', 1)
-
-  actions.sort((a, b) => a.ts - b.ts)
-  actions.forEach((a, i) => { a.id = i + 1 })
-
-  const e = (kind: 'journal' | 'quote', text: string, k: number, hh: number, mm: number, n: number): EntryRow =>
-    ({ id: 0, kind, text, day: dayISO(k), ts: at(k, hh, mm) + n })
-
-  const entries: EntryRow[] = [
-    e('journal', 'Momentum is back — the crash fix shipped before lunch.', 0, 9, 52, 0),
-    e('quote', 'Simplicity is the ultimate sophistication.', 0, 8, 2, 0),
-    e('journal', 'Search ranking tweak on staging. Waiting feels worse than building.', 1, 18, 30, 0),
-    e('quote', 'What gets measured gets managed.', 2, 21, 10, 0),
-    e('journal', 'Six interviews read. The pattern is obvious in hindsight: nobody reads onboarding.', 3, 22, 5, 0),
-    e('quote', 'The way to get started is to quit talking and begin doing.', 4, 7, 45, 0),
-    e('journal', 'Slept badly, still showed up. The walk helps.', 5, 20, 40, 0),
-    e('quote', 'Make it work, make it right, make it fast.', 7, 12, 15, 0),
-    e('journal', 'Decided the widget ships after the waitlist, not before.', 8, 19, 20, 0),
-    e('quote', 'Amateurs wait for inspiration. The rest of us just get up and go to work.', 9, 8, 50, 0),
-    e('journal', 'Paused the reading habit while the launch eats the evenings. Not a failure — a choice.', 10, 23, 0, 0),
+  // The daily's short life, in strict chronological order (id order = the
+  // journal's display order): created four days ago, done every day since —
+  // the streak and the analytics day-ledger read true.
+  const actions: ActionRow[] = [
+    { id: 1, itemId: 1, text: 'Water the plants', verb: 'created', project: null, priority: null, day: dayISO(4), ts: at(4, 7, 0) },
+    { id: 2, itemId: 1, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: dayISO(3), ts: at(3, 9, 12) },
+    { id: 3, itemId: 1, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: dayISO(2), ts: at(2, 8, 40) },
+    { id: 4, itemId: 2, text: 'Book dentist appointment', verb: 'created', project: 'Home', priority: 2, day: dayISO(2), ts: at(2, 11, 0) },
+    { id: 5, itemId: 1, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: dayISO(1), ts: at(1, 9, 20) },
+    { id: 6, itemId: 1, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: todayISO(), ts: at(0, 7, 30) },
   ]
-  entries.forEach((en, i) => { en.id = i + 1 })
 
-  return { items, notes, projects, actions, sessions, entries }
+  return { items, notes, projects, actions, sessions: [], entries: [] }
 }
