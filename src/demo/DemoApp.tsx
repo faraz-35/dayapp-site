@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   fmtClock, hideUntil, makeSeed, openSession, parseEntryCapture, parseGoalTags, parseTags,
-  parseTaskCapture, splitNoteFooter, tierRank, todayISO, totalSecs as sumSecs,
+  parseTaskCapture, setProjectColorMode, splitNoteFooter, tierRank, todayISO, totalSecs as sumSecs,
   type ActionRow, type ActionVerb, type EntryRow, type GoalRow, type HideDuration, type Item,
   type Note, type Priority, type Project, type Seed,
 } from './model'
@@ -106,6 +106,16 @@ export default function DemoApp() {
   })
   const [notesCard, setNotesCard] = useState(false)
   const [tasksCard, setTasksCard] = useState(false)
+  // Settings → Look: how the two grouped surfaces show priority tiers
+  // (dividers by default) and whether projects carry their own hue (the
+  // app's default is single — one grey). projectColor reads the module flag
+  // model keeps, so every label/dot follows the one write.
+  const [backlogBars, setBacklogBars] = useState(false)
+  const [noteBars, setNoteBars] = useState(false)
+  const [projectColorsSingle, setProjectColorsSingle] = useState(() => {
+    setProjectColorMode(true)
+    return true
+  })
   const [headerBtns, setHeaderBtns] = useState<HeaderBtns>({
     // the app's minimal header: Analytics / Settings / Theme — ⌘P needs no
     // mouse door, the ◐ peek needs an archive axis, and the written-entry
@@ -786,6 +796,7 @@ export default function DemoApp() {
                 sel={sel} setSel={setSel} editingId={editingId} setEditingId={setEditingId}
                 detailsId={detailsId} setDetailsId={setDetailsId} pop={pop} setPop={setPop}
                 taskCapRef={taskCapRef} noteCapRef={noteCapRef} act={act}
+                backlogBars={backlogBars} noteBars={noteBars}
                 goalsSlot={features.goals && showGoals && (
                   <DemoGoals
                     features={features}
@@ -806,6 +817,10 @@ export default function DemoApp() {
                 onToggleFeature={(key: FeatureKey) => setFeatures((f) => ({ ...f, [key]: !f[key] }))}
                 notesCard={notesCard} tasksCard={tasksCard}
                 onSetCard={(surface, card) => surface === 'notes' ? setNotesCard(card) : setTasksCard(card)}
+                backlogBars={backlogBars} noteBars={noteBars}
+                onSetPriorityBars={(surface, bars) => surface === 'backlog' ? setBacklogBars(bars) : setNoteBars(bars)}
+                projectColorsSingle={projectColorsSingle}
+                onSetProjectColors={(single) => { setProjectColorMode(single); setProjectColorsSingle(single) }}
                 headerBtns={headerBtns}
                 onToggleHeaderBtn={(btn: HeaderBtn) => setHeaderBtns((hs) => ({ ...hs, [btn]: !hs[btn] }))}
                 themeId={demoThemeId}

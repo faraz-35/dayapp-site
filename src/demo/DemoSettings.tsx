@@ -4,7 +4,9 @@
    Goals surface cards side by side, each carrying its existence master as the
    card title's own switch with the sub-features beneath; a sub-row dims inert
    while its master is off, and the Header rows need their features.
-   Appearance is one look card — the two resting fills over the theme ladder.
+   Appearance is two cards — Theme (the ladder) over Look (the resting fills,
+   how the grouped surfaces show priority tiers, whether projects carry their
+   own hue; the gated rows dim like every dependent row).
    Views holds the demo's one lens, Focus, as a card with an Active/Enter
    state. A theme pick dresses the window only; the page around it answers to
    the nav toggle. Mouse-first like the analytics page: no grammar wiring,
@@ -140,17 +142,21 @@ function ToggleRow({ label, hint, on, needs, needsLabel, onToggle }: {
   )
 }
 
-/** A plain row: label over hint, anything at the right (a Seg, a swatch). */
-function InfoRow({ label, hint, children }: {
+/** A plain row: label over hint, anything at the right (a Seg). `needs` dims
+ *  the row inert while its gate feature is off, and the hint says why — the
+ *  same gates the demo applies when rendering, visible at the control. */
+function InfoRow({ label, hint, needs, needsLabel, children }: {
   label: string
   hint: string
+  needs?: boolean
+  needsLabel?: string
   children?: React.ReactNode
 }) {
   return (
-    <div className="set-row">
+    <div className={'set-row' + (needs ? ' dep' : '')} aria-disabled={needs || undefined}>
       <span className="set-row-text">
         <span className="set-name">{label}</span>
-        <span className="set-hint">{hint}</span>
+        <span className="set-hint">{needs ? `needs ${needsLabel} — off above` : hint}</span>
       </span>
       {children}
     </div>
@@ -206,12 +212,20 @@ function Group({ title, count, master, children }: {
   )
 }
 
-export default function DemoSettings({ features, onToggleFeature, notesCard, tasksCard, onSetCard, headerBtns, onToggleHeaderBtn, themeId, onSetTheme, focusMode, onToggleFocusMode }: {
+export default function DemoSettings({ features, onToggleFeature, notesCard, tasksCard, onSetCard, backlogBars, noteBars, onSetPriorityBars, projectColorsSingle, onSetProjectColors, headerBtns, onToggleHeaderBtn, themeId, onSetTheme, focusMode, onToggleFocusMode }: {
   features: Features
   onToggleFeature(key: FeatureKey): void
   notesCard: boolean
   tasksCard: boolean
   onSetCard(surface: 'notes' | 'tasks', card: boolean): void
+  /** How the two grouped surfaces show priority tiers: dividers (the
+      default) or bars on each row/card. */
+  backlogBars: boolean
+  noteBars: boolean
+  onSetPriorityBars(surface: 'backlog' | 'notes', bars: boolean): void
+  /** Project colors: a hue per project (false) or one grey for all. */
+  projectColorsSingle: boolean
+  onSetProjectColors(single: boolean): void
   headerBtns: HeaderBtns
   onToggleHeaderBtn(btn: HeaderBtn): void
   themeId: string
@@ -256,52 +270,95 @@ export default function DemoSettings({ features, onToggleFeature, notesCard, tas
     </div>
   )
 
-  // Appearance: one look card — the resting fills, then themes as ladder
-  // cards (the eleven shades in editor order).
+  // Appearance: two cards. Theme on top — the ladder (the eleven shades in
+  // editor order). Look beneath it — the resting fills, how the two grouped
+  // surfaces show priority tiers, whether projects carry their own hue. The
+  // priority rows go inert while their surface's priority axis is off (no
+  // tiers can exist), the colors row while every projects axis is off (no
+  // labels render).
   const appearancePane = (
-    <Group title="Appearance">
-      <div className="set-rows">
-        {([['notes', 'Notes background', 'the fill behind each note'],
-           ['tasks', 'Tasks background', 'the fill behind each row']] as const).map(
-          ([key, label, hint]) => {
-            const card = key === 'notes' ? notesCard : tasksCard
+    <>
+      <Group title="Theme">
+        <div className="set-theme-grid">
+          {THEMES.map((t) => {
+            const active = themeId === t.id
             return (
-              <InfoRow key={key} label={label} hint={hint}>
-                <Seg
-                  value={card ? 'card' : 'bare'}
-                  options={[{ v: 'card', label: 'Card' }, { v: 'bare', label: 'Bare' }]}
-                  onPick={(v) => onSetCard(key, v === 'card')}
-                />
-              </InfoRow>
+              <div
+                key={t.id}
+                role="button"
+                aria-pressed={active}
+                className={'set-theme-card' + (active ? ' on' : '')}
+                onClick={() => onSetTheme(t.id)}
+              >
+                <span className="set-strip">
+                  {COLOR_KEYS.map((k) => (
+                    <i key={k} style={{ background: t.colors[k] }} />
+                  ))}
+                </span>
+                <span className="set-theme-foot">
+                  <span className="set-theme-name">{t.name}</span>
+                  {active && <span className="set-state on">Active</span>}
+                </span>
+              </div>
             )
-          },
-        )}
-      </div>
-      <div className="set-theme-grid">
-        {THEMES.map((t) => {
-          const active = themeId === t.id
-          return (
-            <div
-              key={t.id}
-              role="button"
-              aria-pressed={active}
-              className={'set-theme-card' + (active ? ' on' : '')}
-              onClick={() => onSetTheme(t.id)}
-            >
-              <span className="set-strip">
-                {COLOR_KEYS.map((k) => (
-                  <i key={k} style={{ background: t.colors[k] }} />
-                ))}
-              </span>
-              <span className="set-theme-foot">
-                <span className="set-theme-name">{t.name}</span>
-                {active && <span className="set-state on">Active</span>}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-    </Group>
+          })}
+        </div>
+      </Group>
+      <Group title="Look">
+        <div className="set-rows">
+          <InfoRow label="Notes background" hint="the fill behind each note">
+            <Seg
+              value={notesCard ? 'card' : 'bare'}
+              options={[{ v: 'card', label: 'Card' }, { v: 'bare', label: 'Bare' }]}
+              onPick={(v) => onSetCard('notes', v === 'card')}
+            />
+          </InfoRow>
+          <InfoRow label="Tasks background" hint="the fill behind each row">
+            <Seg
+              value={tasksCard ? 'card' : 'bare'}
+              options={[{ v: 'card', label: 'Card' }, { v: 'bare', label: 'Bare' }]}
+              onPick={(v) => onSetCard('tasks', v === 'card')}
+            />
+          </InfoRow>
+          <InfoRow
+            label="Backlog priorities"
+            hint="tier dividers between the groups, or bars on each row — Today's look"
+            needs={!features.taskPriorities}
+            needsLabel="Task priorities"
+          >
+            <Seg
+              value={backlogBars ? 'bars' : 'dividers'}
+              options={[{ v: 'dividers', label: 'Dividers' }, { v: 'bars', label: 'Bars' }]}
+              onPick={(v) => onSetPriorityBars('backlog', v === 'bars')}
+            />
+          </InfoRow>
+          <InfoRow
+            label="Note priorities"
+            hint="tier dividers between the groups, or bars on each card"
+            needs={!features.notePriorities}
+            needsLabel="Note priorities"
+          >
+            <Seg
+              value={noteBars ? 'bars' : 'dividers'}
+              options={[{ v: 'dividers', label: 'Dividers' }, { v: 'bars', label: 'Bars' }]}
+              onPick={(v) => onSetPriorityBars('notes', v === 'bars')}
+            />
+          </InfoRow>
+          <InfoRow
+            label="Project colors"
+            hint="a hue per project, or one grey for every label"
+            needs={!features.taskProjects && !features.noteProjects && !features.goalProjects}
+            needsLabel="a projects switch"
+          >
+            <Seg
+              value={projectColorsSingle ? 'single' : 'multi'}
+              options={[{ v: 'multi', label: 'Multi' }, { v: 'single', label: 'Single' }]}
+              onPick={(v) => onSetProjectColors(v === 'single')}
+            />
+          </InfoRow>
+        </div>
+      </Group>
+    </>
   )
 
   // Header: which icon buttons mount top-left of the window. Off hides only

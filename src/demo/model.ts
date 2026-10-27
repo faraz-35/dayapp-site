@@ -395,10 +395,16 @@ function resolveProject(name: string, projects: Project[]): number | null {
 /* ---- derived facts --------------------------------------------------------- */
 
 // Single-color projects — the app's default since 2026-10-27: every label
-// and dot reads in the metadata grey (the demo carries no toggle; the app's
-// Settings → Look seg flips it).
-export function projectColor(_id: number): string {
-  return 'var(--text-dim)'
+// and dot reads in the metadata grey; Settings → Look → Project colors →
+// Multi brings back the per-id hue. The demo shell flips the flag exactly
+// like the app's shell does.
+let singleColorProjects = true
+export function setProjectColorMode(single: boolean): void {
+  singleColorProjects = single
+}
+export function projectColor(id: number): string {
+  if (singleColorProjects) return 'var(--text-dim)'
+  return `hsl(${(id * 83) % 360} 55% var(--project-l, 68%))`
 }
 
 export const clipProject = (name: string) => (name.length > 6 ? `${name.slice(0, 6)}…` : name)

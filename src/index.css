@@ -25,6 +25,7 @@
   --track: rgba(255, 255, 255, 0.05);
   --terminal: #08090a;
   --border-strong: #2e323b;
+  --project-l: 68%;
   --shadow-win: 0 24px 70px rgba(0, 0, 0, 0.5);
   --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.6);
   --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -911,6 +912,26 @@ h2 {
 }
 .note-actions .item-action { opacity: 0; }
 :is(.note:hover, .note.focused) .note-actions .item-action { opacity: 1; }
+
+/* Bars mode (Settings → Look): the card carries its tier in the top-right
+   corner — the slot the action cluster owns in the default divider
+   treatment — so the cluster reveals LEFT of it and the collapsed preview's
+   label clears the corner. Same 22px box as the buttons, so both align on
+   one row. */
+.notes-bars .note-priority {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  z-index: 2;                    /* over the textarea, like the cluster */
+}
+.notes-bars .note-actions { right: 23px; }  /* the cluster sits left of the bars */
+.notes-bars .note-preview { padding-right: 26px; }  /* the label clears the bars */
+:is(.note:hover, .note.focused) .notes-bars .note-preview {
+  padding-right: 127px;          /* the shifted cluster (~104px) + the bars */
+}
 
 /* ---- row popovers (project picker, reminder stub) --------------------------- */
 

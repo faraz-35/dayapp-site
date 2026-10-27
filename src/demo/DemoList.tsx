@@ -51,6 +51,11 @@ export interface DemoListProps {
   setPop(p: Pop): void
   taskCapRef: React.RefObject<CaptureHandle | null>
   noteCapRef: React.RefObject<CaptureHandle | null>
+  // Settings → Look: the grouped surfaces show bars on their rows/cards
+  // (Today's look) instead of the tier dividers. Display only — the tier
+  // order is the seed's.
+  backlogBars?: boolean
+  noteBars?: boolean
   // the Goals surface, composed above Notes by the shell (Goals sits at the
   // very top of the app's stack, over every capture surface)
   goalsSlot?: React.ReactNode
@@ -130,6 +135,7 @@ export default function DemoList(p: DemoListProps) {
             notes={p.notes}
             features={f}
             projects={p.projects}
+            barsInRows={p.noteBars}
             sel={p.sel}
             setSel={p.setSel}
             pop={p.pop}
@@ -166,6 +172,7 @@ export default function DemoList(p: DemoListProps) {
       />}
       {p.showBacklog && <ItemSection
         name="backlog" items={p.backlog} features={f} projects={p.projects}
+        barsInRows={p.backlogBars}
         activeSession={p.activeSession} nowMs={p.nowMs} totalSecsOf={p.totalSecsOf}
         sel={p.sel} setSel={p.setSel} editingId={p.editingId} setEditingId={p.setEditingId}
         detailsId={p.detailsId} setDetailsId={p.setDetailsId} pop={p.pop} setPop={p.setPop} act={p.act}
@@ -497,10 +504,13 @@ function firstProseLine(body: string, flags: TagFlags): string {
 
 const noteFlagsOf = (f: Features): TagFlags => ({ projects: f.noteProjects, priorities: f.notePriorities })
 
-function NoteGroups({ notes, features, projects, sel, setSel, pop, setPop, act }: {
+function NoteGroups({ notes, features, projects, barsInRows = false, sel, setSel, pop, setPop, act }: {
   notes: Note[]
   features: Features
   projects: Project[]
+  /** Settings → Look: bars on each card (Today's look) instead of the tier
+      dividers. */
+  barsInRows?: boolean
   sel: Sel
   setSel(s: Sel): void
   pop: Pop
@@ -508,12 +518,13 @@ function NoteGroups({ notes, features, projects, sel, setSel, pop, setPop, act }
   act: DemoListProps['act']
 }) {
   // tiers off: one flat list in arrival order — the grouping was the tier
-  // signal, so with the axis gone there is nothing to divide
-  if (!features.notePriorities) {
+  // signal, so with the axis gone there is nothing to divide. Bars mode keeps
+  // the flat list too — the cards carry their own bars in the corner.
+  if (!features.notePriorities || barsInRows) {
     return (
-      <div className="d-notes">
+      <div className={'d-notes' + (barsInRows ? ' notes-bars' : '')}>
         {notes.map((n) => (
-          <NoteCard key={n.id} note={n} features={features} projects={projects} selected={sel?.kind === 'note' && sel.id === n.id}
+          <NoteCard key={n.id} note={n} features={features} projects={projects} barsInRows={barsInRows} selected={sel?.kind === 'note' && sel.id === n.id}
             setSel={setSel} pop={pop} setPop={setPop} act={act} />
         ))}
       </div>
@@ -542,10 +553,13 @@ function NoteGroups({ notes, features, projects, sel, setSel, pop, setPop, act }
   )
 }
 
-function NoteCard({ note, features, projects, selected, setSel, pop, setPop, act }: {
+function NoteCard({ note, features, projects, barsInRows = false, selected, setSel, pop, setPop, act }: {
   note: Note
   features: Features
   projects: Project[]
+  /** Settings → Look: the card carries its bars in the top-right corner (the
+      action cluster's slot) instead of the list carrying dividers. */
+  barsInRows?: boolean
   selected: boolean
   setSel(s: Sel): void
   pop: Pop
@@ -658,15 +672,27 @@ function NoteCard({ note, features, projects, selected, setSel, pop, setPop, act
       {pop && pop.on === 'note' && pop.id === note.id && pop.kind === 'hide' && (
         <HideMenu verb="Hide" onPick={(d) => { act.noteHide(note.id, d); setPop(null) }} />
       )}
+      {/* Bars mode (Settings → Look): the tier rides the corner the action
+          cluster otherwise owns — the cluster reveals left of it (CSS on
+          .notes-bars), in both card states. The axis off, or the note
+          unmarked: nothing here, like a row without the axis. */}
+      {barsInRows && features.notePriorities && note.priority != null && (
+        <span className="note-priority" title="Priority">
+          <PriorityBars filled={4 - note.priority} />
+        </span>
+      )}
     </div>
   )
 }
 
 /* ---- task sections ---------------------------------------------------------- */
 
-function ItemSection({ name, items, features, projects, activeSession, nowMs, totalSecsOf, sel, setSel, editingId, setEditingId, detailsId, setDetailsId, pop, setPop, act }: {
+function ItemSection({ name, items, barsInRows = false, features, projects, activeSession, nowMs, totalSecsOf, sel, setSel, editingId, setEditingId, detailsId, setDetailsId, pop, setPop, act }: {
   name: Section
   items: Item[]
+  /** Settings → Look: bars on the rows (Today's look) instead of the tier
+      dividers — only ever true for the Backlog. */
+  barsInRows?: boolean
   features: Features
   projects: Project[]
   activeSession: SessionRow | null
@@ -692,13 +718,14 @@ function ItemSection({ name, items, features, projects, activeSession, nowMs, to
         const newTier = backlog && (!prev || tierRank(prev.priority) !== tierRank(item.priority))
         return (
           <div key={item.id}>
-            {features.taskPriorities && newTier && (
+            {features.taskPriorities && !barsInRows && newTier && (
               <div className="tier-divider">
                 <PriorityBars filled={item.priority == null ? 0 : 4 - item.priority} />
               </div>
             )}
             <TaskRow
               item={item} features={features} projects={projects}
+              barsInRows={barsInRows}
               activeSession={activeSession} nowMs={nowMs} totalSecsOf={totalSecsOf}
               selected={sel?.kind === 'task' && sel.id === item.id}
               setSel={setSel}
@@ -722,9 +749,12 @@ function ItemSection({ name, items, features, projects, activeSession, nowMs, to
   )
 }
 
-function TaskRow({ item, features, projects, activeSession, nowMs, totalSecsOf, selected, setSel, editing, setEditingId, detailsOpen, setDetailsId, pop, setPop, act }: {
+function TaskRow({ item, features, barsInRows = false, projects, activeSession, nowMs, totalSecsOf, selected, setSel, editing, setEditingId, detailsOpen, setDetailsId, pop, setPop, act }: {
   item: Item
   features: Features
+  /** Settings → Look: bars on the Backlog's rows (Today's look) instead of
+      the tier dividers. */
+  barsInRows?: boolean
   projects: Project[]
   activeSession: SessionRow | null
   nowMs: number
@@ -782,7 +812,8 @@ function TaskRow({ item, features, projects, activeSession, nowMs, totalSecsOf, 
             {features.reminders && item.remindAt && <span className="reminder-chip" title={`Reminds on ${item.remindAt}`}>→ {fmtReminder(item.remindAt)}</span>}
             <span className={`meta-priority${isTiming ? ' timing' : ''}`}>
               {isTiming ? <span className="timer-live" title="Elapsed">{fmtClock(elapsed)}</span>
-                : features.taskPriorities && !isBacklog && item.priority != null ? <PriorityBars filled={4 - item.priority} />
+                : features.taskPriorities && (!isBacklog || barsInRows) && (item.priority != null || (isBacklog && barsInRows))
+                  ? <PriorityBars filled={item.priority == null ? 0 : 4 - item.priority} />
                 : null}
             </span>
             <span className="meta-agent">{features.agent && item.agent && <AgentBadge />}</span>
