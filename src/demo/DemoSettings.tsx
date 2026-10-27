@@ -267,7 +267,6 @@ export default function DemoSettings({ features, onToggleFeature, notesCard, tas
             const card = key === 'notes' ? notesCard : tasksCard
             return (
               <InfoRow key={key} label={label} hint={hint}>
-                <span className={'set-swatch' + (card ? ' filled' : ' empty')} />
                 <Seg
                   value={card ? 'card' : 'bare'}
                   options={[{ v: 'card', label: 'Card' }, { v: 'bare', label: 'Bare' }]}

@@ -25,7 +25,6 @@
   --track: rgba(255, 255, 255, 0.05);
   --terminal: #08090a;
   --border-strong: #2e323b;
-  --project-l: 68%;
   --shadow-win: 0 24px 70px rgba(0, 0, 0, 0.5);
   --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.6);
   --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -680,7 +679,9 @@ h2 {
 .meta-project {
   width: 7.5ch;
   display: flex;
-  justify-content: flex-end;
+  /* The column keeps its width; the name reads from its LEFT edge, the
+     app's 2026-10-27 alignment. */
+  justify-content: flex-start;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -690,7 +691,7 @@ h2 {
   font-size: 11px;
   font-weight: 500;
   white-space: nowrap;
-  text-align: right;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -1666,26 +1667,6 @@ h2 {
 .set-seg button + button { border-left: 1px solid var(--border); }
 .set-seg button:hover { color: var(--text); background: var(--bg-hover); }
 .set-seg button.on { color: var(--accent); background: rgba(var(--accent-rgb), 0.08); }
-
-/* The Card/Bare swatch: a well of the app background — Card fills it with
-   the soft chip, Bare shows a dashed empty frame. Show, don't tell. */
-.set-swatch {
-  width: 26px;
-  height: 16px;
-  border-radius: 3px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  position: relative;
-  flex-shrink: 0;
-}
-.set-swatch::after {
-  content: "";
-  position: absolute;
-  inset: 3px;
-  border-radius: 2px;
-}
-.set-swatch.filled::after { background: var(--bg-soft); border: 1px solid var(--border); }
-.set-swatch.empty::after { border: 1px dashed var(--text-faint); opacity: 0.5; }
 
 /* The theme ladder — the app's Appearance cards: an eleven-shade strip (the
    editor's order) over the name, Active on the live one, click applies. */

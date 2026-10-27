@@ -394,10 +394,11 @@ function resolveProject(name: string, projects: Project[]): number | null {
 // The one token matcher — colors exactly what the parsers strip.
 /* ---- derived facts --------------------------------------------------------- */
 
-// Deterministic hue per project id — the lightness rides the theme's
-// --project-l (applyTheme derives it), so labels hold contrast on any skin.
-export function projectColor(id: number): string {
-  return `hsl(${(id * 83) % 360} 55% var(--project-l, 68%))`
+// Single-color projects — the app's default since 2026-10-27: every label
+// and dot reads in the metadata grey (the demo carries no toggle; the app's
+// Settings → Look seg flips it).
+export function projectColor(_id: number): string {
+  return 'var(--text-dim)'
 }
 
 export const clipProject = (name: string) => (name.length > 6 ? `${name.slice(0, 6)}…` : name)

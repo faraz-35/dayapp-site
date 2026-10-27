@@ -168,7 +168,6 @@ export function applyTheme(theme: Theme, root: HTMLElement = document.documentEl
   // (the old #eef0f3) reads bluish against the neutral page
   r.setProperty('--terminal', light ? '#ffffff' : '#08090a')
   r.setProperty('--border-strong', light ? '#c4c7cf' : '#2e323b')
-  r.setProperty('--project-l', light ? '40%' : '68%')
   r.setProperty(
     '--shadow-win',
     light ? '0 24px 70px rgba(25, 30, 40, 0.16)' : '0 24px 70px rgba(0, 0, 0, 0.5)',
