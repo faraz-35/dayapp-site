@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { MoonIcon, SunIcon, themeIsLight, toggleLight, useTheme } from './themes'
 
@@ -19,10 +20,10 @@ function DemoSkeleton() {
 
 const GITHUB = 'https://github.com/faraz-35/dayapp'
 const INSTALL_CMD_MAC = 'curl -fsSL https://getdayapp.vercel.app/install.sh | sh'
-const INSTALL_CMD_WIN = 'irm https://getdayapp.vercel.app/install.ps1 | iex'
-// The one-liner speaks the visitor's shell — curl|sh on macOS/Linux,
-// irm|iex (PowerShell) on Windows — detected once from the UA.
-const DETECTED_WIN = /windows/i.test(navigator.userAgent)
+// The Windows installer under a version-proof name. release.yml uploads this
+// stable-named copy beside the versioned one; the link survives every bump.
+const WIN_SETUP_URL =
+  'https://github.com/faraz-35/dayapp/releases/latest/download/DayApp-setup.exe'
 const BUILD_CMD = [
   'git clone https://github.com/faraz-35/dayapp.git',
   'cd dayapp && npm install',
@@ -74,8 +75,46 @@ function MenuIcon() {
 function CloseIcon() {
   return (
     <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
-      <path d="M3.6 3.6l8.8 8.8M12.4 3.6l-8.8 8.8" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M3.6 3.6l8.8 8.8M12.4 3.6l-8.8 8.8" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  )
+}
+
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <path d="M8 2.5v7.6M4.7 7l3.3 3.3L11.3 7M3 13.5h10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.3" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="m10.3 10.3 3 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="19" height="19" aria-hidden="true">
+      <path d="M8 1.7 13 3.5v3.9c0 3.2-2 5.5-5 6.9-3-1.4-5-3.7-5-6.9V3.5Z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M8 5v3.2" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="8" cy="10.4" r="0.9" fill="currentColor" />
+    </svg>
+  )
+}
+
+// The three window-control glyphs on the drawn Windows dialog's title bar.
+function WinChrome() {
+  return (
+    <span className="dl-win-chrome" aria-hidden="true">
+      <svg viewBox="0 0 10 10" width="10" height="10"><path d="M1.5 5h7" stroke="currentColor" strokeWidth="1.1" /></svg>
+      <svg viewBox="0 0 10 10" width="10" height="10"><rect x="1.8" y="1.8" width="6.4" height="6.4" fill="none" stroke="currentColor" strokeWidth="1.1" /></svg>
+      <svg viewBox="0 0 10 10" width="10" height="10"><path d="m2 2 6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.1" /></svg>
+    </span>
   )
 }
 
@@ -119,9 +158,8 @@ function StarButton() {
 // raw commands — display lines may carry comments the clipboard shouldn't),
 // flips to a check for a beat, and owns its own state so several boxes on
 // one page never desync.
-function CodeBox({ copy, snug, children }: {
+function CodeBox({ copy, children }: {
   copy: string
-  snug?: boolean
   children: ReactNode
 }) {
   const [copied, setCopied] = useState(false)
@@ -133,7 +171,7 @@ function CodeBox({ copy, snug, children }: {
   }
   return (
     <div className="codewrap">
-      <div className={snug ? 'terminal snug' : 'terminal'}>{children}</div>
+      <div className="terminal">{children}</div>
       <button
         className={copied ? 'copy-btn copied' : 'copy-btn'}
         onClick={doCopy}
@@ -146,42 +184,262 @@ function CodeBox({ copy, snug, children }: {
   )
 }
 
-// The hero's install line: the detected platform's command, the instruction
-// that names the shell to open (the one real install failure is irm pasted
-// into cmd.exe), and both platforms on screen — Mac & Linux share the one
-// curl command, so two tabs cover everyone.
-function InstallLine() {
-  const [win, setWin] = useState(DETECTED_WIN)
-  const cmd = win ? INSTALL_CMD_WIN : INSTALL_CMD_MAC
+// ---- download flow ---------------------------------------------------------
+// The non-developer's install door, and the hero's only install surface. One
+// accent button under the headline; clicking it opens the steps modal. On
+// Windows the click really downloads the installer and the modal walks
+// through four plain steps, including a clickable drawing of the SmartScreen
+// dialog (clicking More info reveals Run anyway — the exact two clicks the
+// real dialog asks for). On macOS/Linux the button keeps its honest verb
+// ("Install on…") and the modal teaches Terminal itself, because a
+// browser-downloaded Mac app hits the "damaged" dialog with no escape — the
+// copyable one-liner lives inside the modal. The depicted OS chrome is drawn
+// with its own fixed colors on purpose: it is a picture of a window, not
+// site chrome. Everything around it rides the tokens.
+
+type DlOS = 'windows' | 'macos' | 'linux'
+
+const OS_NAMES: Record<DlOS, string> = { windows: 'Windows', macos: 'macOS', linux: 'Linux' }
+
+function detectOS(): DlOS {
+  const ua = navigator.userAgent
+  if (/windows/i.test(ua)) return 'windows'
+  if (/mac/i.test(ua)) return 'macos'
+  if (/linux/i.test(ua)) return 'linux'
+  return 'macos'
+}
+
+// The drawn Terminal window — the picture of what success looks like after
+// the paste: the installer's output and the green check. The copyable
+// command itself lives in the real CodeBox beside it.
+function TermFig({ out }: { out: string }) {
   return (
-    <>
-      <div className="install-tabs" role="tablist" aria-label="install platform">
-        <button
-          role="tab"
-          aria-selected={!win}
-          className={'install-tab' + (!win ? ' active' : '')}
-          onClick={() => setWin(false)}
-        >
-          Mac &amp; Linux
-        </button>
-        <button
-          role="tab"
-          aria-selected={win}
-          className={'install-tab' + (win ? ' active' : '')}
-          onClick={() => setWin(true)}
-        >
-          Windows
-        </button>
+    <div className="dl-term">
+      <div className="dl-term-bar">
+        <span className="dl-dot r" /><span className="dl-dot y" /><span className="dl-dot g" />
+        <span className="dl-term-title">Terminal</span>
       </div>
-      <CodeBox snug copy={cmd}>
-        <div className="tline"><span className="tp">{win ? '>' : '$'}</span> {cmd}</div>
-      </CodeBox>
-      <div className="install-note">
-        {win
-          ? 'Open PowerShell and paste the above command to install.'
-          : 'Open Terminal and paste the above command to install.'}
+      <pre className="dl-term-body">
+        {'  downloading DayApp … done\n  '}{out}
+        <span className="dl-ok"> ✓</span>
+      </pre>
+    </div>
+  )
+}
+
+// The steps modal — floats over the whole page (backdrop click, Esc, or the
+// × all close it; the page scroll locks underneath). It portals to <body>:
+// the hero's .fx entrance animation keeps a transform on its subtree even at
+// rest, and a transform ancestor makes position:fixed size to that ancestor —
+// the modal would be a 200px strip instead of full-screen. Its platform tabs
+// are reading state — a Mac visitor may peek at the Windows steps without the
+// button underneath changing its mind about their machine — so the tab lives
+// here, seeded from the detected OS. The head (title, tabs, ×) stays pinned
+// while the steps scroll under it.
+function DlModal({ initialTab, onClose }: { initialTab: DlOS; onClose: () => void }) {
+  const [tab, setTab] = useState<DlOS>(initialTab)
+  const [ss, setSs] = useState(false)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+    }
+  }, [onClose])
+  return createPortal(
+    <div className="dl-modal" onClick={onClose}>
+      <div
+        className="dl-modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Install DayApp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="dl-card-head">
+          <div className="dl-title">Install DayApp on {OS_NAMES[tab]}</div>
+          <div className="install-tabs" role="tablist" aria-label="instructions platform">
+            {(Object.keys(OS_NAMES) as DlOS[]).map((k) => (
+              <button
+                key={k}
+                role="tab"
+                aria-selected={tab === k}
+                className={'install-tab' + (tab === k ? ' active' : '')}
+                onClick={() => setTab(k)}
+              >
+                {OS_NAMES[k]}
+              </button>
+            ))}
+          </div>
+          <button className="dl-modal-close" onClick={onClose} title="Close" aria-label="Close">
+            <CloseIcon />
+          </button>
+        </div>
+
+        <div className="dl-modal-body">
+      {tab === 'windows' && (
+        <div className="dl-panel" role="tabpanel">
+          <div className="dl-step">
+            <div className="dl-num">1</div>
+            <div className="dl-body">
+              <div className="dl-step-title">Wait for the download to finish</div>
+              <p>DayApp-setup.exe lands in your Downloads folder.</p>
+              <div className="dl-fig">
+                <div className="dl-filepill"><DownloadIcon /><span>DayApp-setup.exe</span><span className="dl-ok"><CheckIcon /></span></div>
+              </div>
+            </div>
+          </div>
+          <div className="dl-step">
+            <div className="dl-num">2</div>
+            <div className="dl-body">
+              <div className="dl-step-title">Double-click the file</div>
+              <p>Find it in Downloads, or straight in your browser’s download bar. The setup wizard has nothing to configure — just click <b>Install</b>.</p>
+              <div className="dl-fig">
+                <div className="dl-win">
+                  <div className="dl-win-bar"><span>DayApp Setup</span><WinChrome /></div>
+                  <div className="dl-win-body">
+                    <div className="dl-win-h">Welcome to DayApp Setup</div>
+                    <p>Everything is set up for you — no options to choose.</p>
+                    <div className="dl-win-actions"><span className="dl-graybtn">Close</span><span className="dl-bluebtn">Install</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="dl-step">
+            <div className="dl-num">3</div>
+            <div className="dl-body">
+              <div className="dl-step-title">If a blue warning appears — that’s normal</div>
+              <p>DayApp doesn’t have a paid security certificate yet, so Windows asks before running any new app. Two clicks and you’re through:</p>
+              <div className="dl-fig">
+                <div className="dl-ss">
+                  <div className="dl-ss-head"><ShieldIcon />Windows protected your PC</div>
+                  <p className="dl-ss-body">Microsoft Defender SmartScreen prevented an unrecognized app from starting. Running this app might put your PC at risk.</p>
+                  <div className="dl-ss-actions">
+                    {ss ? (
+                      <span className="dl-runany">Run anyway</span>
+                    ) : (
+                      <button className="dl-ss-more" onClick={() => setSs(true)}>More info</button>
+                    )}
+                    <span className="dl-ss-gray">Don’t run</span>
+                  </div>
+                </div>
+                <div className="dl-figcap">
+                  {ss
+                    ? <>Now <span className="dl-hot">Run anyway</span> lights up — click it, and DayApp installs.</>
+                    : <>Click <b>More info</b> in the dialog above — try it.</>}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="dl-step">
+            <div className="dl-num">4</div>
+            <div className="dl-body">
+              <div className="dl-step-title">Done — DayApp opens</div>
+              <p>Next time, find it in your Start menu.</p>
+              <div className="dl-fig">
+                <div className="dl-appdone"><span className="dl-apptile">d</span><span>DayApp</span><CheckIcon /></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'macos' && (
+        <div className="dl-panel" role="tabpanel">
+          <div className="dl-step">
+            <div className="dl-num">1</div>
+            <div className="dl-body">
+              <div className="dl-step-title">Open Terminal</div>
+              <p>Press <b>⌘-Space</b>, type <b>Terminal</b>, press <b>Enter</b>.</p>
+              <div className="dl-fig">
+                <div className="dl-spot">
+                  <div className="dl-spot-bar"><SearchIcon /><span>Terminal</span><span className="dl-caret" /></div>
+                  <div className="dl-spot-row"><span className="dl-term-ic">&gt;_</span><span>Terminal</span><span className="dl-spot-kind">Application</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="dl-step">
+            <div className="dl-num">2</div>
+            <div className="dl-body">
+              <div className="dl-step-title">Paste one line, press Enter</div>
+              <p>Copy this, paste it into the Terminal window, press Enter. It downloads DayApp and puts it in Applications.</p>
+              <CodeBox copy={INSTALL_CMD_MAC}>
+                <div className="tline"><span className="tp">$</span> {INSTALL_CMD_MAC}</div>
+              </CodeBox>
+              <div className="dl-fig"><TermFig out="DayApp is in Applications." /></div>
+            </div>
+          </div>
+          <p className="dl-why">Why a command instead of a download? Apple shows Mac apps without a paid certificate a “damaged” warning that can’t be clicked through — the command installs cleanly and avoids it.</p>
+        </div>
+      )}
+
+      {tab === 'linux' && (
+        <div className="dl-panel" role="tabpanel">
+          <div className="dl-step">
+            <div className="dl-num">1</div>
+            <div className="dl-body">
+              <div className="dl-step-title">Paste one line in a terminal</div>
+              <p>Open a terminal (Ctrl-Alt-T on Ubuntu), paste this, press Enter.</p>
+              <CodeBox copy={INSTALL_CMD_MAC}>
+                <div className="tline"><span className="tp">$</span> {INSTALL_CMD_MAC}</div>
+              </CodeBox>
+              <div className="dl-fig"><TermFig out="DayApp installed." /></div>
+            </div>
+          </div>
+        </div>
+      )}
+        </div>
       </div>
-    </>
+    </div>,
+    document.body,
+  )
+}
+
+// One flow: the accent button, the saved bubble after a Windows download,
+// and the steps modal floating over the page. Mounted in the hero and at
+// #code — each instance keeps its own open state. The button speaks the
+// visitor's detected machine for the flow's whole life; only the modal's
+// reading tabs move.
+function DownloadFlow() {
+  const [os] = useState<DlOS>(detectOS)
+  const [open, setOpen] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  const isWin = os === 'windows'
+  const go = () => {
+    setOpen(true)
+    if (!isWin || downloading) return
+    setDownloading(true)
+    const a = document.createElement('a')
+    a.href = WIN_SETUP_URL
+    a.click()
+    setTimeout(() => {
+      setDownloading(false)
+      setSaved(true)
+    }, 900)
+  }
+
+  return (
+    <div className="dl-flow">
+      <button className="dl-btn" onClick={go} disabled={downloading}>
+        <DownloadIcon />
+        {downloading
+          ? 'Downloading DayApp-setup.exe…'
+          : isWin ? 'Download for Windows' : `Install on ${OS_NAMES[os]}`}
+      </button>
+      {saved && (
+        <div className="dl-bubble" aria-live="polite">
+          <CheckIcon /><b>DayApp-setup.exe</b><span>saved to your Downloads folder</span>
+        </div>
+      )}
+      {open && <DlModal initialTab={os} onClose={() => setOpen(false)} />}
+    </div>
   )
 }
 
@@ -522,7 +780,7 @@ export default function App() {
           <div className="fx wordmark">DayApp</div>
           <h1 className="fx d1">A hyper-minimal tasks, notes and goals superapp</h1>
           <div className="fx d2 hero-install">
-            <InstallLine />
+            <DownloadFlow />
             <StarButton />
           </div>
         </div>
@@ -627,6 +885,9 @@ export default function App() {
           <a className="btn-ghost" href={GITHUB}>
             github.com/faraz-35/dayapp ↗
           </a>
+        </div>
+        <div className="dl-code-cta">
+          <DownloadFlow />
         </div>
       </Section>
 

@@ -1954,11 +1954,6 @@ h2 {
   min-width: 0;   /* every flex level between the hero and the nowrap command must be allowed to shrink */
   max-width: 100%;
 }
-.terminal.snug {
-  padding: 12px 48px 12px 16px;
-  font-size: 12.5px;
-  line-height: 1.6;
-}
 .copy-btn {
   position: absolute;
   top: 10px;
@@ -1979,16 +1974,8 @@ h2 {
 .copy-btn:hover { background: var(--bg-hover); }
 .copy-btn.copied { color: var(--accent); }
 
-/* The install line — platform pills above the command box (the pick, then
-   the command it picks), the instruction under the box naming the shell to
-   open (the one real install failure is irm pasted into cmd.exe). Mac & Linux
-   share the one curl command. */
-.install-note {
-  margin-top: -16px;
-  margin-bottom: 10px;
-  font-size: 13px;
-  color: var(--text-dim);
-}
+/* The install platform pills — the steps modal's reading tabs. Mac & Linux
+   share the one curl command, so two tabs cover everyone. */
 .install-tabs {
   display: flex;
   gap: 6px;
@@ -2009,6 +1996,362 @@ h2 {
   color: var(--accent);
   border-color: rgba(var(--accent-rgb), 0.5);
   background: rgba(var(--accent-rgb), 0.08);
+}
+
+/* ---- download flow -------------------------------------------------------- */
+/* The non-developer's install door, and the hero's only install surface: one
+   accent button (a real installer download on Windows; on Mac/Linux the
+   click opens the same steps modal and teaches Terminal), a saved bubble,
+   and the steps modal floating over the page — Windows four steps with the
+   drawn SmartScreen dialog (More info is clickable, like the real one),
+   Mac/Linux the Terminal steps with the copyable command inside. The
+   depicted OS chrome below is drawn with its own fixed colors on purpose —
+   it's a picture of a window, not site chrome; #3fb950 is the figures'
+   success green, also a picture. Everything else rides the tokens. */
+
+.dl-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 660px;
+}
+.dl-code-cta { display: flex; justify-content: center; margin-top: 34px; }
+.dl-code-cta .dl-flow { width: auto; }
+
+.dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 8px;
+  padding: 13px 26px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.1s ease, opacity 0.1s ease;
+}
+.dl-btn:hover { filter: brightness(1.08); }
+.dl-btn:disabled { opacity: 0.75; cursor: default; }
+.dl-btn svg { width: 16px; height: 16px; }
+
+.dl-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 15px;
+  font-size: 13.5px;
+}
+.dl-bubble b { font-weight: 500; }
+.dl-bubble span { color: var(--text-faint); }
+.dl-bubble svg { width: 14px; height: 14px; color: #3fb950; }
+
+.dl-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--scrim);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.dl-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  max-height: calc(100dvh - 48px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-win);
+  text-align: left;
+}
+.dl-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 16px 12px 22px;
+  border-bottom: 1px solid var(--border);
+}
+.dl-card-head .install-tabs { margin-left: auto; }
+.dl-modal-close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 6px;
+  color: var(--text-dim);
+  transition: color 0.08s ease, background 0.08s ease;
+}
+.dl-modal-close:hover { color: var(--text); background: var(--bg-hover); }
+.dl-modal-body {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 4px 22px 6px;
+}
+.dl-title { font-size: 16px; font-weight: 600; }
+
+.dl-step { display: flex; gap: 14px; padding: 16px 0; border-top: 1px solid var(--border); }
+.dl-panel .dl-step:first-child { border-top: none; }
+.dl-num {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dl-body { flex: 1; min-width: 0; }
+.dl-step-title { font-size: 15px; font-weight: 500; }
+.dl-body p { font-size: 14px; color: var(--text-dim); margin: 5px 0 0; line-height: 1.55; }
+.dl-body p b { color: var(--text); font-weight: 500; }
+.dl-why {
+  font-size: 13px;
+  color: var(--text-faint);
+  border-top: 1px solid var(--border);
+  padding: 14px 0;
+  margin: 0;
+  line-height: 1.55;
+}
+
+.dl-fig {
+  margin-top: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.dl-figcap { font-size: 12.5px; color: var(--text-faint); text-align: center; }
+.dl-figcap b { color: var(--text-dim); font-weight: 500; }
+.dl-figcap .dl-hot { color: var(--accent); }
+
+/* the downloaded-file pill */
+.dl-filepill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13.5px;
+}
+.dl-filepill svg { width: 14px; height: 14px; color: var(--text-dim); }
+.dl-ok { display: inline-flex; }
+.dl-ok svg { color: #3fb950; }
+
+/* the drawn Windows setup dialog */
+.dl-win {
+  width: 360px;
+  max-width: 100%;
+  background: #f2f2f2;
+  border-radius: 8px;
+  overflow: hidden;
+  color: #1b1b1b;
+  box-shadow: var(--shadow-menu);
+}
+.dl-win-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: #444;
+}
+.dl-win-chrome { display: inline-flex; gap: 10px; color: #777; }
+.dl-win-chrome svg { display: block; }
+.dl-win-body { padding: 18px 18px 16px; text-align: left; }
+.dl-win-h { font-size: 14px; font-weight: 600; }
+.dl-win-body p { font-size: 12.5px; color: #555; margin: 5px 0 14px; }
+.dl-win-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.dl-graybtn {
+  font-size: 12.5px;
+  color: #333;
+  background: #ffffff;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  padding: 5px 14px;
+}
+.dl-bluebtn {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #ffffff;
+  background: #0067c0;
+  border-radius: 4px;
+  padding: 5px 16px;
+}
+
+/* the drawn SmartScreen dialog */
+.dl-ss {
+  width: 380px;
+  max-width: 100%;
+  background: #f2f2f2;
+  border-radius: 8px;
+  overflow: hidden;
+  color: #1b1b1b;
+  box-shadow: var(--shadow-menu);
+  padding: 16px 16px 14px;
+}
+.dl-ss-head { display: flex; align-items: center; gap: 9px; font-size: 14.5px; font-weight: 600; }
+.dl-ss-head svg { color: #0067c0; flex: none; }
+.dl-ss-body { font-size: 12px; color: #555; line-height: 1.45; margin: 8px 0 14px; }
+.dl-ss-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.dl-ss-more {
+  font: inherit;
+  font-size: 12.5px;
+  color: #0067c0;
+  background: transparent;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  margin-right: auto;
+}
+.dl-ss-more:hover { text-decoration: underline; }
+.dl-runany {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #ffffff;
+  background: #0067c0;
+  border-radius: 4px;
+  padding: 5px 16px;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* the opened-app figure */
+.dl-appdone { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; }
+.dl-apptile {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 18px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* the drawn macOS Spotlight search — solid dark on purpose: it's a picture
+   of macOS dark Spotlight, so it reads on both site themes (the translucent
+   white bar it had vanished on the light card) */
+.dl-spot { width: 340px; max-width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.dl-spot-bar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: #23262d;
+  border: 1px solid #30343c;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 15px;
+  color: #e8e9ec;
+}
+.dl-spot-bar svg { opacity: 0.6; flex: none; }
+.dl-caret {
+  width: 1.5px;
+  height: 17px;
+  background: var(--accent);
+  animation: dlblink 1.1s steps(1) infinite;
+}
+@keyframes dlblink { 50% { opacity: 0; } }
+.dl-spot-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  background: #1c1f24;
+  border: 1px solid #26272b;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #a2a7b1;
+}
+.dl-term-ic {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: #000;
+  color: #e8e9ec;
+  font-family: var(--mono);
+  font-size: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.dl-spot-kind { margin-left: auto; font-size: 11px; color: #5c6068; }
+
+/* the drawn Terminal with the copy chip */
+.dl-term {
+  width: 420px;
+  max-width: 100%;
+  background: #101013;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow-menu);
+}
+.dl-term-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #1a1b1e;
+  border-bottom: 1px solid #26272b;
+}
+.dl-dot { width: 10px; height: 10px; border-radius: 50%; }
+.dl-dot.r { background: #ff5f57; }
+.dl-dot.y { background: #febc2e; }
+.dl-dot.g { background: #28c840; }
+.dl-term-title { font-size: 11.5px; color: #8b8e96; margin-left: 8px; }
+.dl-term-body {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: #c9cdd4;
+  margin: 0;
+  padding: 13px 15px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.dl-term-body .dl-ok { color: #3fb950; }
+
+@media (max-width: 560px) {
+  .dl-modal { padding: 16px 10px; }
+  .dl-modal-card { max-height: calc(100dvh - 32px); }
+  .dl-modal-body { padding: 4px 14px 4px; }
+  .dl-step { flex-direction: column; gap: 10px; }
+  .dl-num { width: 24px; height: 24px; font-size: 12px; }
 }
 
 /* ---- site nav -------------------------------------------------------------- */
@@ -2139,14 +2482,8 @@ section[id] { scroll-margin-top: 72px; }
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  min-width: 0;   /* same shrink rule as .hero-inner — the nowrap command must never size the column */
+  min-width: 0;
   max-width: 100%;
-}
-.hero-install .terminal {
-  width: fit-content;
-  max-width: 100%;
-  padding: 14px 52px 14px 18px;
-  font-size: 13px;
 }
 
 .terminal a { color: var(--text); }
@@ -2216,7 +2553,6 @@ section[id] { scroll-margin-top: 72px; }
   .wrap { padding: 0 10px; }
   .section { padding: 72px 10px 0; }
   .hero { padding: 0 20px; }
-  .hero-install .terminal { padding: 12px 44px 12px 14px; font-size: 12px; }
   .site-nav-inner { height: 46px; padding: 0 12px; }
   .site-nav-links { gap: 14px; }
   .site-nav-links a { font-size: 12px; }
