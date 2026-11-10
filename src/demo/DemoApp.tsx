@@ -10,7 +10,7 @@ import {
   fmtClock, hideUntil, makeSeed, openSession, parseEntryCapture, parseGoalTags, parseTags,
   parseTaskCapture, setProjectColorMode, splitNoteFooter, tierRank, todayISO, totalSecs as sumSecs,
   type ActionRow, type ActionVerb, type EntryRow, type GoalRow, type HideDuration, type Item,
-  type Note, type Priority, type Project, type Seed,
+  type Note, type Priority, type Project, type Seed, type Section,
 } from './model'
 import { MoonIcon, SunIcon, THEMES, applyTheme, systemThemeId, themeById, themeIsLight, themeModeSlot } from '../themes'
 import DemoList, { type CaptureHandle, type Pop, type Sel } from './DemoList'
@@ -240,10 +240,10 @@ export default function DemoApp() {
   const taskFlags = { projects: features.taskProjects, priorities: features.taskPriorities, agent: features.agent }
   const noteFlags = { projects: features.noteProjects, priorities: features.notePriorities }
 
-  const logAction = (verb: ActionVerb, text: string, itemId: number | null, projectId: number | null, priority: Priority, goalId: number | null = null) => {
+  const logAction = (verb: ActionVerb, text: string, itemId: number | null, projectId: number | null, priority: Priority, goalId: number | null = null, section: Section | null = null, agent = false) => {
     const projectName = projects.find((p) => p.id === projectId)?.name ?? null
     const row: ActionRow = {
-      id: nextId(), itemId, goalId, text, verb, project: projectName, priority,
+      id: nextId(), itemId, goalId, text, verb, project: projectName, priority, section, agent,
       day: todayISO(), ts: Date.now(),
     }
     setActions((as) => [...as, row])
@@ -293,7 +293,7 @@ export default function DemoApp() {
         details: '', hidden: false, hiddenUntil: null, createdDay: todayISO(), remindAt: null,
       }
       setItems((xs) => [...xs, item])
-      logAction('created', item.text, item.id, item.projectId, item.priority)
+      logAction('created', item.text, item.id, item.projectId, item.priority, null, section, item.agent)
     },
     complete(item: Item) {
       if (item.hidden) return
@@ -301,7 +301,7 @@ export default function DemoApp() {
       if (item.section === 'backlog') {
         // done Backlog rows leave the list — the completion lives in the log
         setItems((xs) => xs.filter((x) => x.id !== item.id))
-        logAction('completed', item.text, item.id, item.projectId, item.priority)
+        logAction('completed', item.text, item.id, item.projectId, item.priority, null, item.section, item.agent)
         return
       }
       const done = item.status === 'done' || (item.section === 'daily' && item.doneDay === todayISO())
@@ -310,11 +310,11 @@ export default function DemoApp() {
             ? { ...x, doneDay: done ? null : todayISO() }
             : { ...x, status: done ? 'active' : 'done' as const })
         : x))
-      logAction(done ? 'uncompleted' : 'completed', item.text, item.id, item.projectId, item.priority)
+      logAction(done ? 'uncompleted' : 'completed', item.text, item.id, item.projectId, item.priority, null, item.section, item.agent)
     },
     del(item: Item) {
       stopFor(item.id)
-      logAction('deleted', item.text, item.id, item.projectId, item.priority)
+      logAction('deleted', item.text, item.id, item.projectId, item.priority, null, item.section, item.agent)
       setItems((xs) => xs.filter((x) => x.id !== item.id))
     },
     commitEdit(item: Item, raw: string) {
@@ -327,7 +327,7 @@ export default function DemoApp() {
       setItems((xs) => xs.map((x) => x.id === item.id
         ? { ...x, text: tags.text, priority: tags.priority, projectId: tags.projectId, agent: tags.agent }
         : x))
-      logAction('edited', tags.text, item.id, tags.projectId, tags.priority)
+      logAction('edited', tags.text, item.id, tags.projectId, tags.priority, null, item.section, item.agent)
     },
     setProject(id: number, projectId: number | null) {
       setItems((xs) => xs.map((x) => (x.id === id ? { ...x, projectId } : x)))
@@ -349,16 +349,16 @@ export default function DemoApp() {
     toggleTimer,
     promote(item: Item) {
       setItems((xs) => xs.map((x) => x.id === item.id ? { ...x, section: 'today' as const, remindAt: null } : x))
-      logAction('moved', item.text, item.id, item.projectId, item.priority)
+      logAction('moved', item.text, item.id, item.projectId, item.priority, null, 'today', item.agent)
     },
     hideItem(item: Item, duration: HideDuration) {
       setItems((xs) => xs.map((x) => (x.id === item.id ? { ...x, hidden: true, hiddenUntil: hideUntil(duration) } : x)))
-      logAction('paused', item.text, item.id, item.projectId, item.priority)
+      logAction('paused', item.text, item.id, item.projectId, item.priority, null, item.section, item.agent)
     },
     unhide(id: number) {
       const item = items.find((x) => x.id === id)
       setItems((xs) => xs.map((x) => (x.id === id ? { ...x, hidden: false, hiddenUntil: null } : x)))
-      if (item) logAction('unpaused', item.text, item.id, item.projectId, item.priority)
+      if (item) logAction('unpaused', item.text, item.id, item.projectId, item.priority, null, item.section, item.agent)
     },
     setDetails(id: number, body: string) {
       setItems((xs) => xs.map((x) => (x.id === id ? { ...x, details: body } : x)))
@@ -830,7 +830,7 @@ export default function DemoApp() {
               />
             )}
             {view === 'analytics' && (
-              <DemoAnalytics items={items} actions={actions} sessions={sessions} projects={projects} />
+              <DemoAnalytics items={items} actions={actions} sessions={sessions} projects={projects} features={features} />
             )}
             {view === 'journal' && (
               <DemoEntries kind="journal" entries={entries}

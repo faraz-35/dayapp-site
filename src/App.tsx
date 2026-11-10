@@ -524,7 +524,7 @@ const FEATURES: { label: string; title: string; body: ReactNode }[] = [
   {
     label: 'analytics',
     title: 'See what you did',
-    body: 'An analytics page shows what you completed last week or last month, your streak, missed habits, and where your time went.',
+    body: 'An analytics page shows what you completed, created, or missed — last week or last month, split by project, priority, and who did the work.',
   },
   {
     label: 'journal',

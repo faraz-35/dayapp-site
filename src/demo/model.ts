@@ -67,6 +67,12 @@ export interface ActionRow {
   verb: ActionVerb
   project: string | null
   priority: Priority
+  /** The write-time section snapshot: where a created task landed, where a
+     completed one came from (the analytics' section splits read it). Goal
+     rows carry null. */
+  section: Section | null
+  /** The delegation snapshot at write time (the Delegation card + scope). */
+  agent: boolean
   day: string // ISO day key on the 6am boundary
   ts: number // ms — the order inside a day
 }
@@ -486,12 +492,12 @@ export function makeSeed(): Seed {
   // journal's display order): created four days ago, done every day since —
   // the streak and the analytics day-ledger read true.
   const actions: ActionRow[] = [
-    { id: 1, itemId: 1, goalId: null, text: 'Water the plants', verb: 'created', project: null, priority: null, day: dayISO(4), ts: at(4, 7, 0) },
-    { id: 2, itemId: 1, goalId: null, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: dayISO(3), ts: at(3, 9, 12) },
-    { id: 3, itemId: 1, goalId: null, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: dayISO(2), ts: at(2, 8, 40) },
-    { id: 4, itemId: 2, goalId: null, text: 'Book dentist appointment', verb: 'created', project: 'Home', priority: 2, day: dayISO(2), ts: at(2, 11, 0) },
-    { id: 5, itemId: 1, goalId: null, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: dayISO(1), ts: at(1, 9, 20) },
-    { id: 6, itemId: 1, goalId: null, text: 'Water the plants', verb: 'completed', project: null, priority: null, day: todayISO(), ts: at(0, 7, 30) },
+    { id: 1, itemId: 1, goalId: null, text: 'Water the plants', verb: 'created', project: null, priority: null, section: 'daily', agent: false, day: dayISO(4), ts: at(4, 7, 0) },
+    { id: 2, itemId: 1, goalId: null, text: 'Water the plants', verb: 'completed', project: null, priority: null, section: 'daily', agent: false, day: dayISO(3), ts: at(3, 9, 12) },
+    { id: 3, itemId: 1, goalId: null, text: 'Water the plants', verb: 'completed', project: null, priority: null, section: 'daily', agent: false, day: dayISO(2), ts: at(2, 8, 40) },
+    { id: 4, itemId: 2, goalId: null, text: 'Book dentist appointment', verb: 'created', project: 'Home', priority: 2, section: 'backlog', agent: false, day: dayISO(2), ts: at(2, 11, 0) },
+    { id: 5, itemId: 1, goalId: null, text: 'Water the plants', verb: 'completed', project: null, priority: null, section: 'daily', agent: false, day: dayISO(1), ts: at(1, 9, 20) },
+    { id: 6, itemId: 1, goalId: null, text: 'Water the plants', verb: 'completed', project: null, priority: null, section: 'daily', agent: false, day: todayISO(), ts: at(0, 7, 30) },
   ]
 
   // No seeded goals — the factory set ships Goals off, and the app's demo
