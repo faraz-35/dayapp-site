@@ -110,17 +110,18 @@ export default function DemoApp() {
   // (dividers by default) and whether projects carry their own hue (the
   // app's default is single — one grey). projectColor reads the module flag
   // model keeps, so every label/dot follows the one write.
-  const [backlogBars, setBacklogBars] = useState(false)
+  const [backlogBars, setBacklogBars] = useState(true)
   const [noteBars, setNoteBars] = useState(false)
   const [projectColorsSingle, setProjectColorsSingle] = useState(() => {
     setProjectColorMode(true)
     return true
   })
   const [headerBtns, setHeaderBtns] = useState<HeaderBtns>({
-    // the app's minimal header: Analytics / Settings / Theme — ⌘P needs no
-    // mouse door, the ◐ peek needs an archive axis, and the written-entry
-    // pages are opt-in chrome. Journal and Quotes ride their features off.
-    palette: false, hidden: false, journal: false, quotes: false, analytics: true, settings: true, theme: true,
+    // The demo's showcase header: the app's minimal set (Analytics /
+    // Settings / Theme) plus the palette door — a first-minute visitor
+    // sees ⌘P has a mouse home. The app's own factory default keeps the
+    // palette off; this is the demo's deliberate divergence.
+    palette: true, hidden: false, journal: false, quotes: false, analytics: true, settings: true, theme: true,
   })
 
   const [now, setNow] = useState(0)
@@ -714,7 +715,29 @@ export default function DemoApp() {
       <div className="demo-grid-inner">
         <div className="app-window">
           <div className="win-header">
+            {/* The demo chrome lives left: reset + fullscreen. The icon
+                cluster is the app's own top-right set, in the app's order. */}
             <div className="win-left">
+              <button className="win-ico" title="Reset the demo" onClick={reset}>↺</button>
+              <button className={'win-ico' + (isFull ? ' on' : '')} title={isFull ? 'Exit fullscreen' : 'Fullscreen'}
+                onClick={toggleFull}>
+                <svg className="action-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+                  <path d="M7.5 1.5h3v3M4.5 10.5h-3v-3M10.5 1.5 7.2 4.8M1.5 10.5l3.3-3.3"
+                    fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+            <span className="win-title">{VIEW_TITLES[view]}</span>
+            <div className="win-right">
+              {features.timer && activeSession && (
+                <span className="timer-chip" title={activeSession.itemText}>
+                  <span className="timer-chip-main">
+                    <span className="timer-chip-pulse" />
+                    <span className="timer-chip-elapsed">{fmtClock((now - activeSession.startedAt) / 1000)}</span>
+                  </span>
+                  <button className="timer-chip-discard" title="Discard the session" onClick={discardTimer}>×</button>
+                </span>
+              )}
               {headerBtns.palette && (
                 <button className="win-ico" title={isMac ? 'Command palette (⌘P)' : 'Command palette (Ctrl+P)'}
                   onClick={() => { setSearchOpen(false); setPaletteOpen((v) => !v) }}>
@@ -743,12 +766,6 @@ export default function DemoApp() {
                 <button className={'win-ico' + (view === 'quotes' ? ' on' : '')} title={view === 'quotes' ? 'Back to the list' : 'Quotes'}
                   onClick={() => setView(view === 'quotes' ? 'list' : 'quotes')}>{view === 'quotes' ? '×' : '❝'}</button>
               )}
-              {headerBtns.settings && (
-                <button className={'win-ico' + (view === 'settings' ? ' on' : '')} title={view === 'settings' ? 'Back to the list' : 'Settings'}
-                  onClick={() => setView(view === 'settings' ? 'list' : 'settings')}>
-                  {view === 'settings' ? '×' : <SettingsIcon />}
-                </button>
-              )}
               {headerBtns.theme && (
                 <button className="win-ico theme-cycle" title={`Theme: ${demoTheme.name}`}
                   aria-label="Cycle theme" onClick={cycleTheme}>
@@ -758,26 +775,12 @@ export default function DemoApp() {
                   )}
                 </button>
               )}
-            </div>
-            <span className="win-title">{VIEW_TITLES[view]}</span>
-            <div className="win-right">
-              {features.timer && activeSession && (
-                <span className="timer-chip" title={activeSession.itemText}>
-                  <span className="timer-chip-main">
-                    <span className="timer-chip-pulse" />
-                    <span className="timer-chip-elapsed">{fmtClock((now - activeSession.startedAt) / 1000)}</span>
-                  </span>
-                  <button className="timer-chip-discard" title="Discard the session" onClick={discardTimer}>×</button>
-                </span>
+              {headerBtns.settings && (
+                <button className={'win-ico' + (view === 'settings' ? ' on' : '')} title={view === 'settings' ? 'Back to the list' : 'Settings'}
+                  onClick={() => setView(view === 'settings' ? 'list' : 'settings')}>
+                  {view === 'settings' ? '×' : <SettingsIcon />}
+                </button>
               )}
-              <button className="win-ico" title="Reset the demo" onClick={reset}>↺</button>
-              <button className={'win-ico' + (isFull ? ' on' : '')} title={isFull ? 'Exit fullscreen' : 'Fullscreen'}
-                onClick={toggleFull}>
-                <svg className="action-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-                  <path d="M7.5 1.5h3v3M4.5 10.5h-3v-3M10.5 1.5 7.2 4.8M1.5 10.5l3.3-3.3"
-                    fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                </svg>
-              </button>
             </div>
           </div>
           <div className="win-body" ref={bodyRef}>
